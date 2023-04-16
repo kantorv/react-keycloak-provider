@@ -14,7 +14,6 @@ export const KeycloakContext = createContext<KeycloakContextType>({ keycloak: un
 
 export const KeycloakProvider = ({ children }: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | undefined>(undefined)
-  //const [authenticated, setAuthenticated] = useState(false)
 
   const initKeycloak = () => {
     const keycloak = new Keycloak()
@@ -27,7 +26,7 @@ export const KeycloakProvider = ({ children }: KeycloakProviderProps) => {
         // redirectUri: process.env.BASE_URL
       })
       .then(function (authenticated) {
-        console.log('[initKeycloak] authenticate', authenticated)
+        console.log('[initKeycloak] authenticated', authenticated)
         //   setAuthenticated(authenticated
       })
       .catch(function () {
@@ -35,41 +34,40 @@ export const KeycloakProvider = ({ children }: KeycloakProviderProps) => {
         // setAuthenticated(false)
       })
 
-    keycloak.onReady = (authenticated) => {
-      console.log('[keycloak.onReady]', authenticated)
-      // setLoginInProgress(false)
-    }
+    // keycloak.onReady = (authenticated) => {
+    //   console.log('[keycloak.onReady]', authenticated)
+    //   // setLoginInProgress(false)
+    // }
 
-    keycloak.onAuthSuccess = () => {
-      console.log('[keycloak.onAuthSuccess]')
-    }
+    // keycloak.onAuthSuccess = () => {
+    //   console.log('[keycloak.onAuthSuccess]')
+    // }
 
-    keycloak.onAuthError = () => {
-      console.log('[keycloak.onAuthError]')
-    }
+    // keycloak.onAuthError = () => {
+    //   console.log('[keycloak.onAuthError]')
+    // }
 
-    keycloak.onAuthRefreshSuccess = () => {
-      console.log('[keycloak.onAuthRefreshSuccess]')
-    }
+    // keycloak.onAuthRefreshSuccess = () => {
+    //   console.log('[keycloak.onAuthRefreshSuccess]')
+    // }
 
-    keycloak.onAuthRefreshError = () => {
-      console.log('[keycloak.onAuthRefreshError]')
-    }
-    keycloak.onAuthLogout = () => {
-      console.log('[keycloak.onAuthLogout]')
-    }
-    keycloak.onTokenExpired = () => {
-      console.log('[keycloak.onTokenExpired]')
-    }
+    // keycloak.onAuthRefreshError = () => {
+    //   console.log('[keycloak.onAuthRefreshError]')
+    // }
+    // keycloak.onAuthLogout = () => {
+    //   console.log('[keycloak.onAuthLogout]')
+    // }
+    // keycloak.onTokenExpired = () => {
+    //   console.log('[keycloak.onTokenExpired]')
+    // }
 
     setKeycloak(keycloak)
   }
 
+  // original useEffect is being reloaded twice in dev. environment, and it causes an infinite loop,
+  // so using this hotfix.
   useEffectOnce(() => {
-    console.log('[AuthProvider.useEffectOnce]my effect is running')
     initKeycloak()
-
-    return () => console.log('[AuthProvider.useEffectOnce]my effect is destroying')
   })
 
   return <KeycloakContext.Provider value={{ keycloak }}>{children}</KeycloakContext.Provider>
