@@ -1,8 +1,15 @@
 import React, { useState, createContext } from 'react'
 import { useEffectOnce } from '../../helpers/UseEffectOnce'
 import Keycloak from 'keycloak-js'
+import type { KeycloakConfig, KeycloakInitOptions } from 'keycloak-js'
+
+//type AnyFunction = (...args: any[]) => any
 
 interface KeycloakProviderProps {
+  initOptions?: KeycloakInitOptions
+  config?: string | KeycloakConfig | undefined
+  successFn?: (authenticated: boolean) => void
+  errorFn?: () => void
   children: React.ReactNode
 }
 
@@ -12,25 +19,26 @@ type KeycloakContextType = {
 
 export const KeycloakContext = createContext<KeycloakContextType>({ keycloak: undefined })
 
-export const KeycloakProvider = ({ children }: KeycloakProviderProps) => {
+export const KeycloakProvider = ({
+  config = undefined,
+  initOptions = {},
+  successFn = undefined,
+  errorFn = undefined,
+  children,
+}: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | undefined>(undefined)
 
   const initKeycloak = () => {
-    const keycloak = new Keycloak()
+    const keycloak = new Keycloak(config)
 
     keycloak
-      .init({
-        // onLoad: 'login-required',
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-        // redirectUri: process.env.BASE_URL
-      })
+      .init(initOptions)
       .then(function (authenticated) {
-        console.log('[initKeycloak] authenticated', authenticated)
-        //   setAuthenticated(authenticated
+        if (successFn) successFn(authenticated)
       })
       .catch(function () {
-        console.log('[initKeycloak] failed to initialize')
+        if (errorFn) errorFn()
+        //console.log('[initKeycloak] failed to initialize')
         // setAuthenticated(false)
       })
 
