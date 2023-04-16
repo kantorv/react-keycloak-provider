@@ -50,11 +50,49 @@ import { KeycloakProvider} from "react-keycloak-provider";
 //...
 
 
-    <KeycloakProvider>
+  <KeycloakProvider 
+    initOptions={{
+        onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+    }}
+  >
+    <AnotherProvider>
         <App />
-    </KeycloakProvider>
+    </AnotherProvider>
+  </KeycloakProvider>
 
 ```
+
+* input arguments
+```typescript
+
+//Provider interface
+interface KeycloakProviderProps {
+    initOptions?: KeycloakInitOptions //
+    config?: string | KeycloakConfig | undefined // 
+    successFn?: (authenticated: boolean) => void
+    errorFn?: () => void
+    children: React.ReactNode
+}
+
+
+//Initialization flow
+const keycloak = new Keycloak(config)
+
+keycloak
+  .init(initOptions)
+  .then(function (authenticated) {
+    if (successFn) successFn(authenticated)
+    //console.log('[initKeycloak] initialized')
+  })
+  .catch(function () {
+    if (errorFn) errorFn()
+    //console.log('[initKeycloak] failed to initialize')
+  })
+`
+
+```
+
 
 
 * consume `keycloak` instance in component
