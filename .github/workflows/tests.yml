@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   tests:
-    if: ${{ !contains(github.event.head_commit.message, '--skip-ci') && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed) }}
+    if: ${{ !contains(github.event.head_commit.message, '--skip-ci') && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed)) }}
     runs-on: ubuntu-latest
     name: Run tests
     timeout-minutes: 10
