@@ -76,7 +76,7 @@ interface KeycloakProviderProps {
 }
 
 
-//Initialization flow
+//Initialization flow within provider
 const keycloak = new Keycloak(config)
 
 keycloak
@@ -89,7 +89,6 @@ keycloak
     if (errorFn) errorFn()
     //console.log('[initKeycloak] failed to initialize')
   })
-`
 
 ```
 
