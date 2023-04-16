@@ -1,3 +1,5 @@
+[![React app tests](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml)
+
 # react-keycloak-provider
 
 
@@ -6,6 +8,9 @@ The provided `keycloak` is an original instance from [keycloak-js](https://www.n
 
 
 ### Usage
+
+* install package `yarn add react-keycloak-provider`  or `npm install react-keycloak-provider`
+
 
 
 * create `silent-check-sso.html` in `/public` folder with the following content:
