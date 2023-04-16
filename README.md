@@ -2,7 +2,7 @@
 
 # react-keycloak-provider
 
-
+Based on `keycloak-js` package, wraps the initialization function with Context Provider, and returns initialized instance.
 The package provides 2 components: `KeycloakProvider` - context provider, and `useKeycloakContext` hook.
 The provided `keycloak` is an original instance from [keycloak-js](https://www.npmjs.com/package/keycloak-js).
 
@@ -50,11 +50,57 @@ import { KeycloakProvider} from "react-keycloak-provider";
 //...
 
 
-    <KeycloakProvider>
+  <KeycloakProvider 
+    initOptions={{
+        onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+    }}
+  >
+    <AnotherProvider>
         <App />
-    </KeycloakProvider>
+    </AnotherProvider>
+  </KeycloakProvider>
 
 ```
+
+* input arguments,  please refer to original [keycloak-js documentation](https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter) for more information about what/which options may be passed
+```typescript
+
+// KeycloakProvider source code
+// src/context/keycloak/KeycloakContext.tsx
+
+//Provider interface
+interface KeycloakProviderProps {
+    initOptions?: KeycloakInitOptions //
+    config?: string | KeycloakConfig | undefined // 
+    successFn?: (authenticated: boolean) => void
+    errorFn?: () => void
+    children: React.ReactNode
+}
+
+
+//Initialization flow inside provider
+const keycloak = new Keycloak(config)
+
+keycloak
+  .init(initOptions)
+  .then(function (authenticated) {
+    if (successFn) successFn(authenticated)
+    //console.log('[initKeycloak] initialized')
+  })
+  .catch(function () {
+    if (errorFn) errorFn()
+    //console.log('[initKeycloak] failed to initialize')
+  })
+
+
+//...
+
+return <KeycloakContext.Provider value={{ keycloak }}>{children}</KeycloakContext.Provider>
+
+// now you can consume the "keycloak" instance in components
+```
+
 
 
 * consume `keycloak` instance in component
