@@ -1,3 +1,5 @@
+[![React app tests](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml)
+
 # react-keycloak-provider
 
 
