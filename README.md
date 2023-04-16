@@ -9,6 +9,9 @@ The provided `keycloak` is an original instance from [keycloak-js](https://www.n
 
 ### Usage
 
+* install package `yarn add react-keycloak-provider`  or `npm install react-keycloak-provider`
+
+
 
 * create `silent-check-sso.html` in `/public` folder with the following content:
 
