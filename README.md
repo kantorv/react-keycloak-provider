@@ -2,7 +2,7 @@
 
 # react-keycloak-provider
 
-
+Based on `keycloak-js` package, wraps the initialization function with Context Provider, and returns initialized instance.
 The package provides 2 components: `KeycloakProvider` - context provider, and `useKeycloakContext` hook.
 The provided `keycloak` is an original instance from [keycloak-js](https://www.npmjs.com/package/keycloak-js).
 
@@ -63,8 +63,10 @@ import { KeycloakProvider} from "react-keycloak-provider";
 
 ```
 
-* input arguments
+* input arguments,  please refer to original [keycloak-js documentation](https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter) for more information about what/which options may be passed
 ```typescript
+
+
 
 //Provider interface
 interface KeycloakProviderProps {
@@ -76,7 +78,7 @@ interface KeycloakProviderProps {
 }
 
 
-//Initialization flow within provider
+//Initialization flow inside provider
 const keycloak = new Keycloak(config)
 
 keycloak
@@ -90,6 +92,12 @@ keycloak
     //console.log('[initKeycloak] failed to initialize')
   })
 
+
+//...
+
+return <KeycloakContext.Provider value={{ keycloak }}>{children}</KeycloakContext.Provider>
+
+// now you can consume the "keycloak" instance in components
 ```
 
 
