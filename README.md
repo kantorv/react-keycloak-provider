@@ -66,7 +66,7 @@ import { KeycloakProvider} from "react-keycloak-provider";
 * input arguments,  please refer to original [keycloak-js documentation](https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter) for more information about what/which options may be passed
 ```typescript
 
-//
+// KeycloakProvider source code
 // src/context/keycloak/KeycloakContext.tsx
 
 //Provider interface
