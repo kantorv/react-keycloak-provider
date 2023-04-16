@@ -1,0 +1,41 @@
+name: React app tests
+
+on:
+  push:
+    branches:
+      - feature/*
+      - hotfix/*
+
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+      - development
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  tests:
+    if: ${{ !contains(github.event.head_commit.message, '--skip-ci') }}
+    runs-on: ubuntu-latest
+    name: Run tests
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'yarn'
+      - name: install
+        run: yarn install
+
+      - name: lint
+        run: yarn lint
+
+      - name: test
+        run: yarn test
+        
