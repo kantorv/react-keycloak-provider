@@ -158,3 +158,5 @@ import PrivateRoute from "...";
 ### Links
 
 * Keycloak JS adapter [https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter](https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter)
+* Hotfix used [https://dev.to/ag-grid/react-18-avoiding-use-effect-getting-called-twice-4i9e](https://dev.to/ag-grid/react-18-avoiding-use-effect-getting-called-twice-4i9e)
+* NPM packaging [https://betterprogramming.pub/how-to-create-and-publish-react-typescript-npm-package-with-demo-and-automated-build-80c40ec28aca](https://betterprogramming.pub/how-to-create-and-publish-react-typescript-npm-package-with-demo-and-automated-build-80c40ec28aca)
