@@ -1,7 +1,7 @@
 {
-  "name": "react-tsup-package",
-  "version": "1.0.4",
-  "description": "",
+  "name": "react-keycloak-provider",
+  "version": "0.0.8",
+  "description": "Keycloak context provider",
   "main": "index.js",
   "scripts": {
     "build": "tsup src/",
@@ -38,9 +38,14 @@
   "files": [
     "dist"
   ],
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "react",
+    "keycloak",
+    "oidc"
+  ],
+  "repository": "https://github.com/kantorv/react-keycloak-provider",
+  "author": "Valentin Kantor",
+  "license": "MIT",
   "devDependencies": {
     "@testing-library/react": "^14.0.0",
     "@types/jest": "^29.5.4",
