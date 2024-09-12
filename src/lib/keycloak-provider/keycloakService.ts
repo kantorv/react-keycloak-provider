@@ -10,7 +10,7 @@ export class KeycloakService {
   private keycloak: Keycloak | null = null;
   private authSuccessListeners: Array<() => void> = [];
   private authErrorListeners: Array<() => void> = [];
-  private keycloakReadyListeners: Array<() => void> = [];
+  private readyListeners: Array<() => void> = [];
   private authenticated: boolean = false;
 
 
@@ -43,21 +43,29 @@ export class KeycloakService {
       this.keycloak = new Keycloak(config);
     }
 
-    this.keycloak
-    .init(initOptions ?? { onLoad: 'login-required' })
-    .then((authenticated: boolean) => {
+
+    this.keycloak.onReady = (authenticated: boolean) => {
       this.authenticated = authenticated;
-      if (authenticated) {
-        this.authSuccessListeners.forEach(listener => listener());
-      } else {
+      console.log('[KeycloakService] onReady event fired with authenticated:', authenticated);
+      this.readyListeners.forEach(listener => listener());
+    };
+
+
+
+    this.keycloak
+      .init(initOptions ?? { onLoad: 'login-required' })
+      .then((authenticated: boolean) => {
+        this.authenticated = authenticated;
+        if (authenticated) {
+          this.authSuccessListeners.forEach(listener => listener());
+        } else {
+          this.authErrorListeners.forEach(listener => listener());
+        }
+      })
+      .catch((error) => {
+        console.error('Keycloak initialization error:', error);
         this.authErrorListeners.forEach(listener => listener());
-      }
-      this.keycloakReadyListeners.forEach(listener => listener());
-    })
-    .catch((error) => {
-      console.error('Keycloak initialization error:', error);
-      this.authErrorListeners.forEach(listener => listener());
-    });
+      });
 
 
   }
@@ -86,12 +94,11 @@ export class KeycloakService {
         this.authErrorListeners.push(listener);
         break;
       case 'keycloak-ready':
-        this.keycloakReadyListeners.push(listener);
+        this.readyListeners.push(listener);
         break;
       default:
         throw new Error('Unknown event type');
     }
   }
-
 
 }
