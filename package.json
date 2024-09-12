@@ -101,5 +101,8 @@
       "skipChecks": true,
       "publish": true
     }
+  },
+  "dependencies": {
+    "keycloak-js": "^25.0.5"
   }
 }
