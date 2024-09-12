@@ -1,0 +1,111 @@
+# For more information see: https://github.com/actions/create-release
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# on:
+#   push:
+#     # Sequence of patterns matched against refs/tags
+#     tags:
+#       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - 'development'
+
+name: Create Release
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the pull request labels
+        id: labels
+        run: echo "labels=$(jq -r '.pull_request.labels[].name' $GITHUB_EVENT_PATH | tr '\n' ',')" >> $GITHUB_ENV
+
+      - name: Determine the release type
+        id: release_type
+        run: |
+          labels=${{ env.labels }}
+          if [[ "$labels" == *"major"* ]]; then
+            echo "release_type=major" >> $GITHUB_ENV
+          elif [[ "$labels" == *"minor"* ]]; then
+            echo "release_type=minor" >> $GITHUB_ENV
+          elif [[ "$labels" == *"patch"* ]]; then
+            echo "release_type=patch" >> $GITHUB_ENV
+          else
+            echo "No valid release label found."
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+
+
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'yarn'
+          registry-url: https://registry.npmjs.org
+
+
+
+      - name: Install dependencies
+        run: yarn install
+
+      # - name: Run tests
+      #   run: yarn test --ci
+
+
+
+
+      - name: Build package
+        run: yarn build --silent 2>/dev/null # TODO: resolve "Module level directives cause errors when bundled, 'use client' was ignored."
+
+      - name: Release-it
+        run: | # # -i  ${{ env.release_type }}
+          npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+          yarn release --ci  --increment=$release_type
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+      
+
+      - id: deploy-storybook
+        uses: bitovi/github-actions-storybook-to-github-pages@v1.0.3
+        with:
+          install_command: yarn install 
+          build_command: yarn build-storybook
+          path: storybook-static
+        env:
+          GH_TOKEN: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Create Release
+      #   id: create_release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      #   with:
+      #     tag_name: ${{ github.ref }}
+      #     release_name: Release ${{ github.ref }}
+      #     body: |
+      #       Changes in this Release
+      #       - First Change
+      #       - Second Change
+      #     draft: false
+      #     prerelease: false

@@ -1,0 +1,104 @@
+{
+  "name": "react-external-lib-boilerplate",
+  "version": "0.1.5",
+  "private": false,
+  "repository": "ssh+git@github.com:kantorv/react-external-lib.git",
+  "author": "Valentin Kantor",
+  "license": "MIT",
+  "main": "./build/index.js",
+  "module": "./build/index.es.js",
+  "types": "./build/index.d.ts",
+  "files": [
+    "build"
+  ],
+  "keywords": [
+    "react",
+    "typescript",
+    "rollup"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "test": "react-scripts test",
+    "release": "release-it",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "^1.9.0",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-url": "^8.0.2",
+    "@storybook/addon-essentials": "^8.2.9",
+    "@storybook/addon-interactions": "^8.2.9",
+    "@storybook/addon-links": "^8.2.9",
+    "@storybook/addon-onboarding": "^8.2.9",
+    "@storybook/addon-webpack5-compiler-swc": "^1.0.5",
+    "@storybook/blocks": "^8.2.9",
+    "@storybook/react": "^8.2.9",
+    "@storybook/react-webpack5": "^8.2.9",
+    "@storybook/test": "^8.2.9",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^13.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22.5.4",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "eslint-plugin-storybook": "^0.8.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1",
+    "release-it": "^17.6.0",
+    "rollup-plugin-dts": "^6.1.1",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "rollup-plugin-postcss": "^4.0.2",
+    "storybook": "^8.2.9",
+    "typescript": "^5.6.2",
+    "web-vitals": "^4.2.3"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "plugin:storybook/recommended"
+    ]
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "release-it": {
+    "git": {
+      "commit": true,
+      "tag": true,
+      "push": true
+    },
+    "github": {
+      "release": true,
+      "releaseName": "Release ${version}",
+      "autoGenerate": true,
+      "preRelease": false,
+      "draft": false
+    },
+    "npm": {
+      "skipChecks": true,
+      "publish": true
+    }
+  }
+}
