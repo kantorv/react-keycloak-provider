@@ -75,7 +75,7 @@ jobs:
 
 
       - name: Build package
-        run: yarn build --silent 2>/dev/null # TODO: resolve "Module level directives cause errors when bundled, 'use client' was ignored."
+        run: yarn build
 
       - name: Release-it
         run: | # # -i  ${{ env.release_type }}
@@ -86,14 +86,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
       
 
-      - id: deploy-storybook
-        uses: bitovi/github-actions-storybook-to-github-pages@v1.0.3
-        with:
-          install_command: yarn install 
-          build_command: yarn build-storybook
-          path: storybook-static
-        env:
-          GH_TOKEN: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+#      - id: deploy-storybook
+#        uses: bitovi/github-actions-storybook-to-github-pages@v1.0.3
+#        with:
+#          install_command: yarn install
+#          build_command: yarn build-storybook
+#          path: storybook-static
+#        env:
+#          GH_TOKEN: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
 
       # - name: Create Release
       #   id: create_release
