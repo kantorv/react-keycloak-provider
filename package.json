@@ -1,8 +1,8 @@
 {
-  "name": "react-external-lib-boilerplate",
-  "version": "0.1.5",
+  "name": "react-keycloak-provider",
+  "version": "0.1.0",
   "private": false,
-  "repository": "ssh+git@github.com:kantorv/react-external-lib.git",
+  "repository": "ssh+git@github.com:kantorv/react-keycloak-provider.git",
   "author": "Valentin Kantor",
   "license": "MIT",
   "main": "./build/index.js",
@@ -14,7 +14,8 @@
   "keywords": [
     "react",
     "typescript",
-    "rollup"
+    "keycloak",
+    "oidc"
   ],
   "scripts": {
     "build": "rollup -c",
@@ -100,5 +101,8 @@
       "skipChecks": true,
       "publish": true
     }
+  },
+  "dependencies": {
+    "keycloak-js": "^25.0.5"
   }
 }
