@@ -133,5 +133,7 @@ jobs:
           cd demo-app
           yarn add $_package
           yarn build
-          
+
+        env:
+          CI: false
           
