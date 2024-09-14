@@ -124,7 +124,7 @@ jobs:
 
       - name: Setup demo app
         run: |
-          yarn create react-app demo-app --template typescript
+          yarn create react-app demo-app --template typescript > /dev/null 2>&1
           cp -f ./ci/tests/*.tsx ./demo-app/src
           cp  ./ci/tests/silent-check-sso.html ./demo-app/public/silent-check-sso.html
           _version=`cat package.json | jq  --raw-output .version`
