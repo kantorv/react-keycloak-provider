@@ -1,5 +1,5 @@
 # React Keycloak Provider
-
+[![Feature branch updated](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml)
 
 ##### usage
 ```tsx
