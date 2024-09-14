@@ -1,6 +1,6 @@
 {
   "name": "react-keycloak-provider",
-  "version": "1.0.2",
+  "version": "1.0.3-0",
   "private": false,
   "repository": "ssh+git@github.com:kantorv/react-keycloak-provider.git",
   "author": "Valentin Kantor",
@@ -26,8 +26,10 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^1.9.0",
+    "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.7",
     "@rollup/plugin-typescript": "^11.1.6",
     "@rollup/plugin-url": "^8.0.2",
     "@storybook/addon-essentials": "^8.2.9",
@@ -53,6 +55,7 @@
     "release-it": "^17.6.0",
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-peer-deps-external": "^2.2.4",
+    "rollup-plugin-polyfill-node": "^0.13.0",
     "rollup-plugin-postcss": "^4.0.2",
     "storybook": "^8.2.9",
     "typescript": "^5.6.2",
