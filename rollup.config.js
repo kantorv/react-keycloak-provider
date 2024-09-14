@@ -23,9 +23,12 @@ export default [{
       sourcemap: true
     }
   ],
+  external: ['crypto'], // Mark crypto as external
   plugins: [
     peerDepsExternal(),
-    resolve(), 
+    resolve({
+      preferBuiltins: false // Set this to false to avoid the warning
+    }),
     commonjs(), 
     typescript(),
     postcss(),
