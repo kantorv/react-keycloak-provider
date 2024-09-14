@@ -1,0 +1,18 @@
+services:
+  keycloak:
+    env_file:
+      - path: ./.env.keycloak.ci
+        required: true # default
+
+    image: quay.io/keycloak/keycloak:latest # TODO: consider image caching
+    container_name: keycloak
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - 8282:8080
+    volumes:
+      - type: bind
+        source: ./demo-realm-with-react-client-localhost-3000-export.json
+        target: /opt/keycloak/data/import/realm-export.json
+        read_only: true

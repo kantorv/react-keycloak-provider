@@ -1,4 +1,4 @@
-name: Feature branch updated
+name: tests
 
 permissions:
   contents: read
@@ -9,6 +9,10 @@ on:
     branches:
       - 'feature/*'
       - 'hotfix/*'
+
+
+env:
+  CHROME_VERSION: "128.0.6613.137" # Selenium tests
 
 jobs:
   run-tests:
@@ -22,11 +26,77 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      - name: Load chrome from cache
+        id: chrome
+        uses: actions/cache@v4
+        with:
+          path: /tmp/chrome-linux64.zip
+          key: ${{ env.CHROME_VERSION }}
+
+      - name: load chrome
+        if: steps.chrome.outputs.cache-hit != 'true'
+        run: |
+          wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chrome-linux64.zip -O /tmp/chrome-linux64.zip
+
+      - name: Load chromedriver from cache
+        id: chromedriver
+        uses: actions/cache@v4
+        with:
+          path: /tmp/chromedriver-linux64.zip
+          key: ${{ env.CHROME_VERSION }}
+
+      - name: load chromedriver
+        if: steps.chromedriver.outputs.cache-hit != 'true'
+        run: |
+          wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chromedriver-linux64.zip -O /tmp/chromedriver-linux64.zip
+
+      - name: unzip chrome assets
+        run: |
+          unzip /tmp/chrome-linux64.zip -d /tmp
+          unzip /tmp/chromedriver-linux64.zip -d /tmp
+          # ensure chrome assets exists
+          [[ -f /tmp/chromedriver-linux64/chromedriver  ]] || exit 1  
+          [[ -f /tmp/chrome-linux64/chrome  ]] || exit 1  
+
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull keycloak image
+        run: docker pull quay.io/keycloak/keycloak:latest
+
+
+
+#      - name: Login to Docker Hub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+#          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip' # caching pip dependencies
+
+      - name: install packages
+        run: pip install -r ci/requirements.txt
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -41,6 +111,49 @@ jobs:
       # - name: Run tests
       #   run: yarn test --ci
 
+      # python3 -m http.server 3000 --bind localhost  --directory ./build
+
+
+
+      - name: Bump version
+        run: yarn version --prerelease --preid rc
 
       - name: Build
         run: yarn build
+        env:
+          CI: false
+          # Workaround for: "Treating warnings as errors because process.env.CI = true".
+
+
+      - name: Pack
+        run: yarn pack
+
+      - name: Setup demo app
+        run: |
+          yarn create react-app demo-app --template typescript > /dev/null 2>&1
+          cp -f ./ci/tests/*.tsx ./demo-app/src
+          cp  ./ci/tests/silent-check-sso.html ./demo-app/public/silent-check-sso.html
+          _version=`cat package.json | jq  --raw-output .version`
+          _name=`cat package.json | jq  --raw-output .name`
+          _package="$(pwd)/${_name}-v${_version}.tgz"
+          cd demo-app
+          yarn add $_package
+          yarn build
+
+        env:
+          CI: false
+          
+      - name: Start Demo App
+        run: |
+          cd demo-app
+          yarn start &
+
+      - name: Start Keycloak
+        run: |
+          cd ci
+          bash run.sh
+
+      - name: Run tests
+        run: |
+          cd ci/tests
+          python tests.py
