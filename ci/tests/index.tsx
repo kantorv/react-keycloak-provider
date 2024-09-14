@@ -2,8 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+
+//@ts-expect-error
 import reportWebVitals from './reportWebVitals';
 
+//@ts-expect-error
 import { KeycloakProvider } from 'react-keycloak-provider'
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
