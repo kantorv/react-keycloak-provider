@@ -146,3 +146,8 @@ jobs:
         run: |
           cd ci
           bash run.sh
+
+      - name: Run tests
+        run: |
+          cd ci/tests
+          python tests.py
