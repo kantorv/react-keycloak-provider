@@ -1,6 +1,6 @@
 # React Keycloak Provider
-[![Feature branch updated](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml)
-
+[![tests](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml)
+[![npm](https://img.shields.io/npm/v/npm-badge-generator.svg)](https://www.npmjs.com/package/react-keycloak-provider)
 ##### usage
 ```tsx
 
