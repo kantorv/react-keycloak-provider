@@ -1,6 +1,8 @@
 # React Keycloak Provider
 [![tests](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/tests.yml)
+[![release](https://github.com/kantorv/react-keycloak-provider/actions/workflows/release.yml/badge.svg)](https://github.com/kantorv/react-keycloak-provider/actions/workflows/release.yml)
 [![npm](https://img.shields.io/npm/v/react-keycloak-provider.svg)](https://www.npmjs.com/package/react-keycloak-provider)
+
 ##### usage
 ```tsx
 
