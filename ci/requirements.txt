@@ -1,0 +1,8 @@
+selenium
+
+# local developement
+# notebook
+# ipywidgets
+# matplotlib
+
+# jupyter notebook --notebook-dir=./notebooks

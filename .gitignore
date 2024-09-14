@@ -25,3 +25,5 @@ yarn-error.log*
 *storybook.log
 
 .idea/
+ci/chrome
+venv312/
