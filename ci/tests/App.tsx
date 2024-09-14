@@ -1,10 +1,6 @@
 import React, { useEffect } from 'react';
-
-//@ts-expect-error
 import logo from './logo.svg';
 import './App.css';
-
-//@ts-expect-error
 import { useKeycloakContext } from 'react-keycloak-provider'
 
 function App() {
