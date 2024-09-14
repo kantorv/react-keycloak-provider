@@ -1,6 +1,6 @@
 {
   "name": "react-keycloak-provider",
-  "version": "1.0.3-0",
+  "version": "1.0.4-0",
   "private": false,
   "repository": "ssh+git@github.com:kantorv/react-keycloak-provider.git",
   "author": "Valentin Kantor",
