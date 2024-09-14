@@ -137,3 +137,12 @@ jobs:
         env:
           CI: false
           
+      - name: Start Demo App
+        run: |
+          cd demo-app
+          yarn start &
+
+      - name: Start Keycloak
+        run: |
+          cd ci
+          bash run.sh
