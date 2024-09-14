@@ -10,11 +10,22 @@ from selenium.webdriver.support import expected_conditions as EC
 # https://googlechromelabs.github.io/chrome-for-testing/#beta
 # https://googlechromelabs.github.io/chrome-for-testing/
 # CHROME_VERSION="129.0.6634.0" # CANARY
-CHROME_VERSION="128.0.6613.119" # STABLE
+# CHROME_VERSION="128.0.6613.119" # STABLE
 
-def init_browser(version=CHROME_VERSION):
-    DRIVER_PATH = f"../chrome/{version}/chromedriver-linux64/chromedriver"
-    BINARY_PATH = f"../chrome/{version}/chrome-linux64/chrome"
+# local env
+# DRIVER_PATH = f"../chrome/{CHROME_VERSION}/chromedriver-linux64/chromedriver"
+# BINARY_PATH = f"../chrome/{CHROME_VERSION}/chrome-linux64/chrome"
+
+
+
+
+
+
+def init_browser():
+
+
+    DRIVER_PATH = f"/tmp/chromedriver-linux64/chromedriver"
+    BINARY_PATH = f"/tmp/chrome-linux64/chrome"
 
     chrome_options = Options()
     #  chrome_options.add_experimental_option("prefs", prefs)
