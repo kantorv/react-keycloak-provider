@@ -23,7 +23,7 @@ USER_FIRSTNAME="Hello"
 USER_LASTNAME="World"
 
 
-KEYCLOAK_URL="http://127.0.0.1:8282"
+KEYCLOAK_URL="http://localhost:8282"
 KEYCLOAK_ADMIN_PASSWORD="change_me"
 
 
