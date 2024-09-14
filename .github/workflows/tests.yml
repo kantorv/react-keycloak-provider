@@ -40,10 +40,10 @@ jobs:
           unzip /tmp/chrome-linux64.zip
           
       - name: Load chromedriver from cache
-        id: chrome
+        id: chromedriver
         uses: actions/cache@v4
         with:
-          path: /tmp/chrome-linux64.zip
+          path: /tmp/chromedriver-linux64.zip
           key: ${{ env.CHROME_VERSION }}
 
       - name: load chromedriver
