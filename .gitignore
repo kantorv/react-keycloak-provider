@@ -26,4 +26,5 @@ yarn-error.log*
 
 .idea/
 ci/chrome
+ci/notebooks
 venv312/
