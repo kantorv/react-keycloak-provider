@@ -101,5 +101,27 @@ jobs:
 
       # python3 -m http.server 3000 --bind localhost  --directory ./build
 
+
+
+      - name: Bump version
+        run: yarn version --prerelease --preid rc
+
       - name: Build
         run: yarn build
+
+      - name: Pack
+        run: yarn pack
+
+      - name: Setup demo app
+        run: |
+          yarn create react-app demo-app --template typescript
+          cp -f ./ci/tests/*.tsx ./demo-app/src
+          cp  ./ci/tests/silent-check-sso.html ./demo-app/public/silent-check-sso.html
+          _version=`cat package.json | jq  --raw-output .version`
+          _name=`cat package.json | jq  --raw-output .name`
+          _package="$(pwd)/${_name}-v${_version}.tgz"
+          cd demo-app
+          yarn add $_package
+          yarn build
+          
+          
