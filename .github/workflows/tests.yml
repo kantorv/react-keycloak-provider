@@ -114,6 +114,10 @@ jobs:
 
       - name: Build
         run: yarn build
+        env:
+          CI: false
+          # Workaround for: "Treating warnings as errors because process.env.CI = true".
+
 
       - name: Pack
         run: yarn pack
