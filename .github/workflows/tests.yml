@@ -77,6 +77,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip' # caching pip dependencies
+
+      - name: install packages
+        run: pip install -r ci/requirements.txt
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -91,6 +99,7 @@ jobs:
       # - name: Run tests
       #   run: yarn test --ci
 
+      # python3 -m http.server 3000 --bind localhost  --directory ./build
 
       - name: Build
         run: yarn build
