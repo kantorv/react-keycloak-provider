@@ -13,8 +13,6 @@ on:
 
 env:
   CHROME_VERSION: "128.0.6613.137" # Selenium tests
-  CHROME_URL: "https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chrome-linux64.zip"
-  CHROMEDRIVER_URL: "https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chromedriver-linux64.zip"
 
 jobs:
   run-tests:
@@ -33,12 +31,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/chrome-linux64.zip
-          key: "${{ env.CHROME_VERSION }}"
+          key: ${{ env.CHROME_VERSION }}
 
       - name: load chrome
         if: steps.chrome.outputs.cache-hit != 'true'
         run: |
-          wget ${{ CHROME_URL }} -O /tmp/chrome-linux64.zip
+          wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chrome-linux64.zip -O /tmp/chrome-linux64.zip
           unzip /tmp/chrome-linux64.zip
           
       - name: Load chromedriver from cache
@@ -46,12 +44,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/chrome-linux64.zip
-          key: "${{ env.CHROME_VERSION }}"
+          key: ${{ env.CHROME_VERSION }}
 
       - name: load chromedriver
-        if: steps.chrome.outputs.cache-hit != 'true'
+        if: steps.chromedriver.outputs.cache-hit != 'true'
         run: |
-          wget ${{ CHROMEDRIVER_URL }} -O /tmp/chromedriver-linux64.zip
+          wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chromedriver-linux64.zip -O /tmp/chromedriver-linux64.zip
           unzip /tmp/chromedriver-linux64.zip
           
 
