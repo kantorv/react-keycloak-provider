@@ -10,11 +10,9 @@ from selenium.webdriver.support import expected_conditions as EC
 # https://googlechromelabs.github.io/chrome-for-testing/#beta
 # https://googlechromelabs.github.io/chrome-for-testing/
 # CHROME_VERSION="129.0.6634.0" # CANARY
-# CHROME_VERSION="128.0.6613.119" # STABLE
+#
 
 # local env
-# DRIVER_PATH = f"../chrome/{CHROME_VERSION}/chromedriver-linux64/chromedriver"
-# BINARY_PATH = f"../chrome/{CHROME_VERSION}/chrome-linux64/chrome"
 
 
 
@@ -22,7 +20,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 def init_browser():
-
+    # local env
+    # CHROME_VERSION = "128.0.6613.119"  # STABLE
+    # DRIVER_PATH = f"../chrome/{CHROME_VERSION}/chromedriver-linux64/chromedriver"
+    # BINARY_PATH = f"../chrome/{CHROME_VERSION}/chrome-linux64/chrome"
 
     DRIVER_PATH = f"/tmp/chromedriver-linux64/chromedriver"
     BINARY_PATH = f"/tmp/chrome-linux64/chrome"
@@ -46,12 +47,12 @@ def run_test():
 
 
     browser.get("http://localhost:3000")
-    WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, ".//button[text()='Login']")))
+    WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, ".//a[text()='Login']")))
     print(f"[run_test] browser open: localhost:3000")
 
 
     print(f"[run_test] Login btn click")
-    btn = browser.find_element(By.XPATH, ".//button[text()='Login']")
+    btn = browser.find_element(By.XPATH, ".//a[text()='Login']")
     btn.click()
 
     WebDriverWait(browser, 10).until(EC.url_contains('localhost:8282'))
@@ -68,22 +69,18 @@ def run_test():
     WebDriverWait(browser, 10).until(EC.url_contains('localhost:3000'))
     print(f"[run_test] Redirected to localhost:3000")
 
-    WebDriverWait(browser, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Account settings'][@type='button']")))
-    account_menu_btn = browser.find_element(By.XPATH, "//button[@aria-label='Account settings'][@type='button']")
-    account_menu_btn.click()
-    print(f"[run_test] Clicked in account menu")
+
 
 
     # click on logout button
-    WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, ".//li[text()='Logout'][@role='menuitem']")))
-    logout_btn = browser.find_element(By.XPATH, ".//li[text()='Logout'][@role='menuitem']")
+    WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, ".//a[text()='Logout']")))
+    logout_btn = browser.find_element(By.XPATH, ".//a[text()='Logout']")
     logout_btn.click()
     print(f"[run_test] Clicked on 'Logout' button")
 
     # verify login btn exists
-    WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, ".//button[text()='Login']")))
-    login_btn = browser.find_element(By.XPATH, ".//button[text()='Login']")
+    WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, ".//a[text()='Login']")))
+    login_btn = browser.find_element(By.XPATH, ".//a[text()='Login']")
     # will raise an exception if non found
 
     print(f"[run_test] Logout success") # logout success
