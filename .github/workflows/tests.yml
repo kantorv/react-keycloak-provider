@@ -128,11 +128,12 @@ jobs:
       - name: Pack
         run: yarn pack
 
+      #
       - name: Setup demo app
         run: |
           yarn create react-app demo-app --template typescript > /dev/null 2>&1
-          cp -f ./ci/tests/*.tsx ./demo-app/src
-          cp  ./ci/tests/silent-check-sso.html ./demo-app/public/silent-check-sso.html
+          cp -f ./ci/tests/index.tsx ./ci/tests/App.tsx ./demo-app/src
+          cp ./ci/tests/silent-check-sso.html ./demo-app/public/silent-check-sso.html
           _version=`cat package.json | jq  --raw-output .version`
           _name=`cat package.json | jq  --raw-output .name`
           _package="$(pwd)/${_name}-v${_version}.tgz"

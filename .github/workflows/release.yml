@@ -17,7 +17,7 @@ on:
     branches:
       - 'development'
 
-name: Create Release
+name: release
 
 jobs:
   release:
