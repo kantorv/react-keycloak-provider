@@ -33,7 +33,7 @@ export default [{
       browser: true
     }),
     commonjs({
-      include: /node_modules/, // Convert CommonJS modules to ES6, especially for packages like `keycloak-js`
+      include: /node_modules/, // Convert CommonJS modules to ES6
     }),
     typescript(),
     postcss(),
