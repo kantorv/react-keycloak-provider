@@ -128,7 +128,8 @@ jobs:
       - name: Pack
         run: yarn pack
 
-      #
+      # thats doesn't work, meaning there are some cases when the test is passed, but when installed from npm raises errors.
+      # TODO: support prereleases,
       - name: Setup demo app
         run: |
           yarn create react-app demo-app --template typescript > /dev/null 2>&1
