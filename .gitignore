@@ -28,3 +28,4 @@ yarn-error.log*
 ci/chrome
 ci/notebooks
 venv312/
+venv313/

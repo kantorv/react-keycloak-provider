@@ -12,8 +12,8 @@ on:
 
 
 env:
-  CHROME_VERSION: "128.0.6613.137"
-  #CHROME_VERSION: "142.0.7444.61" # Selenium tests
+  #CHROME_VERSION: "128.0.6613.137"
+  CHROME_VERSION: "142.0.7444.61" # Selenium tests
 
 jobs:
   run-tests:
