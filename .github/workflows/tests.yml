@@ -14,6 +14,7 @@ on:
 env:
   #CHROME_VERSION: "128.0.6613.137"
   CHROME_VERSION: "142.0.7444.61" # Selenium tests
+  KEYCLOAK_VERSION: "26.4" # Selenium tests
 
 jobs:
   run-tests:
@@ -27,27 +28,27 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      # - name: Load chrome from cache
-      #   id: chrome
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: /tmp/chrome-linux64.zip
-      #     key: ${{ env.CHROME_VERSION }}
+      - name: Load chrome from cache
+        id: chrome
+        uses: actions/cache@v4
+        with:
+          path: /tmp/chrome-linux64.zip
+          key: ${{ env.CHROME_VERSION }}
 
       - name: load chrome
-        #if: steps.chrome.outputs.cache-hit != 'true'
+        if: steps.chrome.outputs.cache-hit != 'true'
         run: |
           wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chrome-linux64.zip -O /tmp/chrome-linux64.zip
 
-      # - name: Load chromedriver from cache
-      #   id: chromedriver
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: /tmp/chromedriver-linux64.zip
-      #     key: ${{ env.CHROME_VERSION }}
+      - name: Load chromedriver from cache
+        id: chromedriver
+        uses: actions/cache@v4
+        with:
+          path: /tmp/chromedriver-linux64.zip
+          key: ${{ env.CHROME_VERSION }}
 
       - name: load chromedriver
-        #if: steps.chromedriver.outputs.cache-hit != 'true'
+        if: steps.chromedriver.outputs.cache-hit != 'true'
         run: |
           wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chromedriver-linux64.zip -O /tmp/chromedriver-linux64.zip
 
@@ -75,13 +76,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/keycloakimagestable.tar
-          key: keycloakimage-stable
+          key: keycloakimage-stable-${{ env.KEYCLOAK_VERSION }}
 
       - name: save staticappsclient
         if: steps.keycloakimagestable.outputs.cache-hit != 'true'
         run: |
-          docker pull quay.io/keycloak/keycloak:26.4
-          docker save -o /tmp/keycloakimagestable.tar quay.io/keycloak/keycloak:26.4
+          docker pull quay.io/keycloak/keycloak:${{ env.KEYCLOAK_VERSION }}
+          docker save -o /tmp/keycloakimagestable.tar quay.io/keycloak/keycloak:${{ env.KEYCLOAK_VERSION }}
       - name: load keycloakimagestable
         run: |
           docker image load -i  /tmp/keycloakimagestable.tar --platform=linux/amd64
