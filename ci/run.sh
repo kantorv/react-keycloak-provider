@@ -46,7 +46,7 @@ while [ $counter -lt $MAX_RETRIES ]; do
     exit_code=$?
     
     # Check if curl failed with connection reset (exit code 56)
-    if [ $exit_code -eq 56 ]; then
+    if [ $exit_code -eq 56 ] || [ $exit_code -eq 52 ]; then
         counter=$((counter + 1))
         echo "Connection reset (attempt $counter/$MAX_RETRIES). Retrying in ${SLEEP_TIME}s..."
         sleep $SLEEP_TIME
