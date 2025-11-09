@@ -14,7 +14,7 @@ echo "Service Ready!!"
 
 
 
-
+echo "Creating demo user"
 USER_NAME="demo3"
 USER_EMAIL="$USER_NAME@example.com"
 USER_PASSWORD="demo@pass"
@@ -26,24 +26,60 @@ USER_LASTNAME="World"
 KEYCLOAK_URL="http://localhost:8282"
 KEYCLOAK_ADMIN_PASSWORD="change_me"
 
-
-ADMIN_BEARER=$(curl -s \
-  -d "client_id=admin-cli" \
-  -d "username=admin" \
-  -d "password=$KEYCLOAK_ADMIN_PASSWORD" \
-  -d "grant_type=password" \
-  "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" | jq -r ".access_token")
+MAX_RETRIES=10
+SLEEP_TIME=5
+counter=0
 
 
-#echo "ADMIN_BEARER: $ADMIN_BEARER"
+ 
 
+while [ $counter -lt $MAX_RETRIES ]; do
+    # Run curl command and capture response
+    response=$(
+          curl -s \
+          -d "client_id=admin-cli" \
+          -d "username=admin" \
+          -d "password=$KEYCLOAK_ADMIN_PASSWORD" \
+          -d "grant_type=password" \
+          "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token"
+    )
+    exit_code=$?
+    
+    # Check if curl failed with connection reset (exit code 56)
+    if [ $exit_code -eq 56 ]; then
+        counter=$((counter + 1))
+        echo "Connection reset (attempt $counter/$MAX_RETRIES). Retrying in ${SLEEP_TIME}s..."
+        sleep $SLEEP_TIME
+    elif [ $exit_code -eq 0 ]; then
+        # Curl succeeded, check response length
+        if [ -z "$response" ]; then
+            # Response is empty
+            counter=$((counter + 1))
+            echo "Empty response (attempt $counter/$MAX_RETRIES). Retrying in ${SLEEP_TIME}s..."
+            sleep $SLEEP_TIME
+        else
+            # Response has content - success!
+            echo "$response"
+            ADMIN_BEARER=$(echo $response | jq -r ".access_token")
+            counter=$MAX_RETRIES
+        fi
+    else
+        # Other error
+        echo "Curl failed with exit code $exit_code"
+        exit $exit_code
+    fi
+done
 
+ 
+ 
 resp1=$(
   curl -s -X POST $KEYCLOAK_URL/admin/realms/demo/users \
       -H "Authorization: Bearer ${ADMIN_BEARER}" \
       -H 'Content-Type: application/json' \
       -d '{"username": "'${USER_NAME}'", "email": "'${USER_EMAIL}'", "firstName": "'${USER_FIRSTNAME}'", "lastName": "'${USER_LASTNAME}'", "emailVerified":true, "enabled":true, "credentials" : [{"type" : "password","value":"'${USER_PASSWORD}'","temporary":false}]}' \
 )
+
+ 
 
 
 #resp2=$(
@@ -68,9 +104,7 @@ curl -s -X POST $KEYCLOAK_URL/realms/demo/protocol/openid-connect/token \
 
 #echo "token: $resp"
 ACCESS_TOKEN=$(echo ${resp} | jq -r ".access_token")
-#echo "ACCESS_TOKEN:"
-#echo $ACCESS_TOKEN
-
+ 
 
 
 curl --location --request POST $KEYCLOAK_URL/realms/demo/protocol/openid-connect/userinfo \
