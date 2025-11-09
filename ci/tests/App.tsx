@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import logo from './logo.svg';
 import './App.css';
-import { useKeycloakContext } from 'react-keycloak-provider'
+import { useKeycloak } from 'react-keycloak-provider'
 
 function App() {
-  const { keycloak, authenticated } = useKeycloakContext();
+  const { keycloak, authenticated } = useKeycloak();
 
 
 

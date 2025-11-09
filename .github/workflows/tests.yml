@@ -12,7 +12,9 @@ on:
 
 
 env:
-  CHROME_VERSION: "128.0.6613.137" # Selenium tests
+  #CHROME_VERSION: "128.0.6613.137"
+  CHROME_VERSION: "142.0.7444.61" # Selenium tests
+  KEYCLOAK_VERSION: "26.4" # Selenium tests
 
 jobs:
   run-tests:
@@ -59,14 +61,36 @@ jobs:
           [[ -f /tmp/chrome-linux64/chrome  ]] || exit 1  
 
 
+
+
+
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Pull keycloak image
-        run: docker pull quay.io/keycloak/keycloak:latest
+      - name: Load keycloak image from cache
+        id: keycloakimagestable
+        uses: actions/cache@v4
+        with:
+          path: /tmp/keycloakimagestable.tar
+          key: keycloakimage-stable-${{ env.KEYCLOAK_VERSION }}
+
+      - name: save staticappsclient
+        if: steps.keycloakimagestable.outputs.cache-hit != 'true'
+        run: |
+          docker pull quay.io/keycloak/keycloak:${{ env.KEYCLOAK_VERSION }}
+          docker save -o /tmp/keycloakimagestable.tar quay.io/keycloak/keycloak:${{ env.KEYCLOAK_VERSION }}
+      - name: load keycloakimagestable
+        run: |
+          docker image load -i  /tmp/keycloakimagestable.tar --platform=linux/amd64
+
+
+
+      # - name: Pull keycloak image
+      #   run: docker pull quay.io/keycloak/keycloak:latest
 
 
 
@@ -79,7 +103,7 @@ jobs:
 
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -90,9 +114,9 @@ jobs:
           
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: 'pip' # caching pip dependencies
 
       - name: install packages
@@ -101,7 +125,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'yarn'
 
 

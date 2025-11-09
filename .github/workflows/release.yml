@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: git config
@@ -54,12 +54,10 @@ jobs:
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
 
-
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 24
           cache: 'yarn'
           registry-url: https://registry.npmjs.org
 

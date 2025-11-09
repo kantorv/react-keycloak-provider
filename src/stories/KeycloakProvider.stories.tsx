@@ -3,11 +3,11 @@ import type { Meta, StoryObj } from "@storybook/react";
 //import {  ErrorAlert } from "..";
 
  
-import  { KeycloakProvider, useKeycloakContext } from '..'
+import  { KeycloakProvider, useKeycloak } from '..'
 
 const MyComponent = ()=>{
 
-  const {keycloak, authenticated} = useKeycloakContext()
+  const {keycloak, authenticated} = useKeycloak()
 
   React.useEffect(()=>{
     console.log("[MyComponent.useEffect called]", keycloak)
@@ -37,6 +37,8 @@ export const Single: Story = {
 	render: () =>
 		<KeycloakProvider
          // config={window.location.origin + '/kclocal.json'}
+          disabled={false}
+
           config={{
             url: 'http://localhost:8282/',
             realm: 'demo',
