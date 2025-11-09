@@ -16,7 +16,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 
-
+def get_default_chrome_options():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--no-sandbox")
+    return options
 
 
 def init_browser():
@@ -28,7 +31,8 @@ def init_browser():
     DRIVER_PATH = f"/tmp/chromedriver-linux64/chromedriver"
     BINARY_PATH = f"/tmp/chrome-linux64/chrome"
 
-    chrome_options = Options()
+    chrome_options =   get_default_chrome_options()
+    assert chrome_options.capabilities['browserName'] == 'chrome'
     #  chrome_options.add_experimental_option("prefs", prefs)
 
     chrome_options.add_argument("--headless")  # Enable headless mode
