@@ -4,7 +4,7 @@ services:
       - path: ./.env.keycloak.ci
         required: true # default
 
-    image: quay.io/keycloak/keycloak:latest # TODO: consider image caching
+    image: quay.io/keycloak/keycloak:26.4 # TODO: consider image caching
     container_name: keycloak
     command:
       - start-dev
