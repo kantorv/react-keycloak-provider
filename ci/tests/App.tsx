@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import logo from './logo.svg';
-import './App.css';
-import { useKeycloakContext } from 'react-keycloak-provider'
+//import './App.css';
+import { useKeycloak } from '../../src/lib/keycloak-provider/KeycloakProvider'
 
 function App() {
-  const { keycloak, authenticated } = useKeycloakContext();
+  const { keycloak, authenticated } = useKeycloak();
 
 
 
@@ -19,14 +19,14 @@ function App() {
          <a
           className="App-link"
           href="#"
-          onClick={() => keycloak.logout()}
+          onClick={() =>keycloak &&  keycloak.logout()}
         >
           Logout
         </a> :
           <a
             className="App-link"
             href="#"
-            onClick={() => keycloak.login()}
+            onClick={() => keycloak &&  keycloak.login()}
           >
             Login
           </a>
