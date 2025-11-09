@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import logo from './logo.svg';
+import './App.css';
 import { useKeycloak } from 'react-keycloak-provider'
 
 function App() {
   const { keycloak, authenticated } = useKeycloak();
+
+
+
   return (
     <div className="App">
       <header className="App-header">
@@ -15,14 +19,14 @@ function App() {
          <a
           className="App-link"
           href="#"
-          onClick={() =>keycloak &&  keycloak.logout()}
+          onClick={() => keycloak.logout()}
         >
           Logout
         </a> :
           <a
             className="App-link"
             href="#"
-            onClick={() => keycloak &&  keycloak.login()}
+            onClick={() => keycloak.login()}
           >
             Login
           </a>
