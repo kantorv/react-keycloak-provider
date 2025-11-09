@@ -35,17 +35,17 @@ root.render(
 ```tsx
 
 // App.tsx
-import { useKeycloakContext } from './lib/keycloak-provider/useKeycloakContext';
+import { useKeycloak } from './lib/keycloak-provider/useKeycloakContext';
 import Button from '@mui/material/Button';
 
 const AppBar = ()=> {
-    const {keycloak, authenticated} = useKeycloakContext();
+    const {keycloak, authenticated} = useKeycloak();
 
 
 
     return (
         <div> 
-            {authenticated? 
+            {keycloak & authenticated? 
                 <Button onClick={keycloak.logout} label="Logout" /> :  
                 <Button onClick={keycloak.login} label="Login" />
             } 

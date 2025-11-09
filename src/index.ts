@@ -1,5 +1,4 @@
-import { KeycloakProvider } from './lib/keycloak-provider/KeycloakProvider'
-import { useKeycloakContext } from './lib/keycloak-provider/useKeycloakContext'
-
-export { KeycloakProvider, useKeycloakContext }
+import { KeycloakProvider, useKeycloak } from './lib/keycloak-provider/KeycloakProvider'
+ 
+export { KeycloakProvider, useKeycloak }
 export type  { KeycloakConfig, KeycloakInitOptions }  from 'keycloak-js'
