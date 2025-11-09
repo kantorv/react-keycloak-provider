@@ -27,27 +27,27 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Load chrome from cache
-        id: chrome
-        uses: actions/cache@v4
-        with:
-          path: /tmp/chrome-linux64.zip
-          key: ${{ env.CHROME_VERSION }}
+      # - name: Load chrome from cache
+      #   id: chrome
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: /tmp/chrome-linux64.zip
+      #     key: ${{ env.CHROME_VERSION }}
 
       - name: load chrome
-        if: steps.chrome.outputs.cache-hit != 'true'
+        #if: steps.chrome.outputs.cache-hit != 'true'
         run: |
           wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chrome-linux64.zip -O /tmp/chrome-linux64.zip
 
-      - name: Load chromedriver from cache
-        id: chromedriver
-        uses: actions/cache@v4
-        with:
-          path: /tmp/chromedriver-linux64.zip
-          key: ${{ env.CHROME_VERSION }}
+      # - name: Load chromedriver from cache
+      #   id: chromedriver
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: /tmp/chromedriver-linux64.zip
+      #     key: ${{ env.CHROME_VERSION }}
 
       - name: load chromedriver
-        if: steps.chromedriver.outputs.cache-hit != 'true'
+        #if: steps.chromedriver.outputs.cache-hit != 'true'
         run: |
           wget https://storage.googleapis.com/chrome-for-testing-public/${{ env.CHROME_VERSION }}/linux64/chromedriver-linux64.zip -O /tmp/chromedriver-linux64.zip
 
@@ -102,7 +102,7 @@ jobs:
 
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -113,9 +113,9 @@ jobs:
           
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: 'pip' # caching pip dependencies
 
       - name: install packages
