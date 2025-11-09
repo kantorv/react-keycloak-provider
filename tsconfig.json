@@ -14,8 +14,8 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -29,7 +29,8 @@
     // optional - in general it's a good practice to decouple declaration files from your actual transpiled JavaScript files
     "declarationDir": "build/dts",
     // optional if you're using babel to transpile TS -> JS
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+     "outDir": "./build"
   },
   "include": [
     "src"
