@@ -12,7 +12,7 @@ on:
 
 
 env:
-  CHROME_VERSION: "128.0.6613.137" # Selenium tests
+  CHROME_VERSION: "142.0.7444.61" # Selenium tests
 
 jobs:
   run-tests:
@@ -92,7 +92,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: 'pip' # caching pip dependencies
 
       - name: install packages
@@ -101,7 +101,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'yarn'
 
 
