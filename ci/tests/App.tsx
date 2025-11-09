@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import logo from './logo.svg';
 //import './App.css';
-import { useKeycloak } from '../../src/lib/keycloak-provider/KeycloakProvider'
+import { useKeycloak } from 'react-keycloak-provider'
 
 function App() {
   const { keycloak, authenticated } = useKeycloak();
