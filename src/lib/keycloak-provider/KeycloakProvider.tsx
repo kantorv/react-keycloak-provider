@@ -17,6 +17,7 @@ interface KeycloakProviderProps {
   children: React.ReactNode;
   disabled?: boolean; // new prop
   timeout?: number; 
+  loader?:React.ReactNode;
 }
 
 // Timeout in milliseconds for Keycloak server to respond
@@ -37,7 +38,8 @@ export const KeycloakProvider = ({
   initOptions = {},
   children,
    disabled = false,
-   timeout=KEYCLOAK_READY_TIMEOUT_MS
+   timeout=KEYCLOAK_READY_TIMEOUT_MS,
+   loader =  <LoadingScreenSample />
 }: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
@@ -92,7 +94,7 @@ export const KeycloakProvider = ({
 
   // Show loading until ready or timed out
   if (!ready && !timedOut) {
-    return <LoadingScreenSample />;
+    return {loader};
   }
 
   // Provide safe context even if server is offline
