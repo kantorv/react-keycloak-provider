@@ -18,8 +18,9 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <KeycloakProvider
-      // config={window.location.origin + '/keycloak.json'}
-        
+      disabled={false} // disable keycloak auth ("keycloak" instance returned from hook would be null)
+      timeout={12000}  // default connection timeout
+
       // passed to constructor
       // const keycloak = new Keycloak({ ... })  
       config={{
