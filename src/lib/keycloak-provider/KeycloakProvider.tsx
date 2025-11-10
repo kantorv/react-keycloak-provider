@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { KeycloakConfig, KeycloakInitOptions } from 'keycloak-js';
 import Keycloak from 'keycloak-js';
 import { KeycloakService } from './keycloakService';
-import { default as LoadingScreenSample } from './Loading';
+
 
 interface KeycloakContextType {
   keycloak: Keycloak | null;
@@ -39,7 +39,7 @@ export const KeycloakProvider = ({
   children,
    disabled = false,
    timeout = KEYCLOAK_READY_TIMEOUT_MS,
-   loader =  <LoadingScreenSample />
+   loader =  <>Loading...</>
 }: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
