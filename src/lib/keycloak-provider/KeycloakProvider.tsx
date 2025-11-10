@@ -16,6 +16,7 @@ interface KeycloakProviderProps {
   initOptions?: KeycloakInitOptions;
   children: React.ReactNode;
    disabled?: boolean; // new prop
+   timeout?: number; 
 }
 
 // Timeout in milliseconds for Keycloak server to respond
@@ -36,6 +37,7 @@ export const KeycloakProvider = ({
   initOptions = {},
   children,
    disabled = false,
+   timeout=KEYCLOAK_READY_TIMEOUT_MS
 }: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
@@ -72,16 +74,16 @@ export const KeycloakProvider = ({
     keycloakService.on('auth-error', onAuthError);
 
     // Timeout fallback in case server is offline
-    const timeout = setTimeout(() => {
+    const _timeout = setTimeout(() => {
       if (!ready) {
         console.warn('KeycloakService did not become ready within timeout');
         setTimedOut(true);
       }
-    }, KEYCLOAK_READY_TIMEOUT_MS);
+    }, timeout);
 
     // Cleanup on unmount
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(_timeout);
       keycloakService.off('keycloak-ready', onReady);
       keycloakService.off('auth-success', onAuthSuccess);
       keycloakService.off('auth-error', onAuthError);
