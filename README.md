@@ -18,9 +18,9 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <KeycloakProvider
-      disabled={false}              // optional - disable keycloak auth ("keycloak" instance returned from hook would be null)
-      timeout={12000}               // optional - default connection timeout
-      loader={<MyCustomProgress />} // optional - custom loaded  
+      disabled={false}              // optional - (default = false) disable keycloak auth ("keycloak" instance returned from hook would be null)
+      timeout={12000}               // optional - connection timeout (default = 12000)
+      loader={<MyCustomProgress />} // optional - custom loader  (default = <>Loading</>)
 
       // passed to constructor
       // const keycloak = new Keycloak({ ... })  
