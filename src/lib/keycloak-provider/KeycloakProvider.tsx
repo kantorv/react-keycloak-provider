@@ -38,7 +38,7 @@ export const KeycloakProvider = ({
   initOptions = {},
   children,
    disabled = false,
-   timeout=KEYCLOAK_READY_TIMEOUT_MS,
+   timeout = KEYCLOAK_READY_TIMEOUT_MS,
    loader =  <LoadingScreenSample />
 }: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
@@ -94,7 +94,7 @@ export const KeycloakProvider = ({
 
   // Show loading until ready or timed out
   if (!ready && !timedOut) {
-    return {loader};
+    return <>{loader}</>;
   }
 
   // Provide safe context even if server is offline
