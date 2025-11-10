@@ -15,8 +15,8 @@ interface KeycloakProviderProps {
   config: string | KeycloakConfig; // required
   initOptions?: KeycloakInitOptions;
   children: React.ReactNode;
-   disabled?: boolean; // new prop
-   timeout?: number; 
+  disabled?: boolean; // new prop
+  timeout?: number; 
 }
 
 // Timeout in milliseconds for Keycloak server to respond
