@@ -3,8 +3,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 //import {  ErrorAlert } from "..";
 
 
-import { default as LoadingScreenSample } from '../lib/keycloak-provider/Loading'
-
+//import { default as LoadingScreenSample } from '../lib/keycloak-provider/Loading'
+const LoadingScreenSample = ()=>(<div>Loading</div>)
 
 
 
