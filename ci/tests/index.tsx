@@ -11,6 +11,7 @@ root.render(
   <React.StrictMode>
     <KeycloakProvider
       disabled={false}
+      timeout={1000}
 
       config={{
         url: 'http://localhost:8282/',
@@ -21,6 +22,7 @@ root.render(
       initOptions={{
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+        checkLoginIframe: false,
       }}
     >
       <App />
