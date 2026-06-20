@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: git config
@@ -55,12 +55,17 @@ jobs:
 
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'yarn'
-          registry-url: https://registry.npmjs.org
 
+
+      # Trusted publishing (OIDC) requires npm 11.5.1+. The npm version bundled
+      # with actions/setup-node's Node release is usually older than this.
+      - name: Update npm for trusted publishing support
+        run: npm install -g npm@latest
 
 
       - name: Install dependencies
@@ -77,10 +82,8 @@ jobs:
 
       - name: Release-it
         run: | # # -i  ${{ env.release_type }}
-          npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
           yarn release --ci  --increment=$release_type
         env:
-          NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
       
 
