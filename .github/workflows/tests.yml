@@ -144,8 +144,20 @@ jobs:
 
 
 
-      # - name: Bump version
-      #   run: yarn version --prerelease --preid rc
+      # Give this run's tarball a version no other run has used.
+      #
+      # `yarn add <tarball>` caches by name@version, and the yarn cache is restored
+      # across runs by setup-node's `cache: 'yarn'`. release-it only bumps the version
+      # on merge to development, so every feature-branch run used to pack DIFFERENT
+      # contents under the SAME 2.1.0 — and yarn served whichever 2.1.0 it had cached
+      # first, silently testing stale code. A unique version makes that collision
+      # impossible. Not committed or tagged: --no-git-tag-version only edits
+      # package.json in the runner's checkout.
+      - name: Bump version for this run
+        run: |
+          _base=`jq --raw-output .version package.json`
+          yarn version --new-version "${_base}-rc.${{ github.run_number }}.${{ github.run_attempt }}" --no-git-tag-version
+          jq --raw-output .version package.json
 
       - name: Build
         run: yarn build
@@ -157,8 +169,8 @@ jobs:
       - name: Pack
         run: yarn pack
 
-      # thats doesn't work, meaning there are some cases when the test is passed, but when installed from npm raises errors.
-      # TODO: support prereleases,
+      # The demo app installs the packed tarball rather than the sources, because
+      # tests have passed against source and still failed once installed from a package.
       - name: Setup demo app
         run: |
           yarn create react-app demo-app --template typescript > /dev/null 2>&1
@@ -167,8 +179,17 @@ jobs:
           _version=`cat package.json | jq  --raw-output .version`
           _name=`cat package.json | jq  --raw-output .name`
           _package="$(pwd)/${_name}-v${_version}.tgz"
+          test -f "$_package" || { echo "::error::packed tarball not found: $_package"; exit 1; }
           cd demo-app
+          # belt and braces: never let a cached entry for this package satisfy the add
+          yarn cache clean "$_name" > /dev/null 2>&1 || true
           yarn add $_package
+          # Prove the tarball is what got installed. A cache hit would leave an older
+          # version here, and the failure would otherwise surface as a confusing type
+          # error against stale .d.ts forty lines later.
+          _installed=`jq --raw-output .version node_modules/${_name}/package.json`
+          test "$_installed" = "$_version" \
+            || { echo "::error::installed ${_name}@${_installed}, expected ${_version} - a stale copy satisfied the add"; exit 1; }
           yarn build
 
         env:

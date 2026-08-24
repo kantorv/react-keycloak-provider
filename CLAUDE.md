@@ -157,6 +157,18 @@ There's a comment in the workflow noting this approach exists because tests
 sometimes pass against source but fail once installed from a packed tarball —
 keep that in mind if asked to "speed up CI by testing source directly."
 
+**Why the workflow bumps to an `-rc.<run>.<attempt>` version before packing.**
+`yarn add <tarball>` caches by `name@version`, and setup-node's `cache: 'yarn'`
+restores that cache across runs. `release-it` only bumps the version on merge to
+`development`, so without the bump every feature-branch run packs *different*
+contents under the *same* version — and yarn installs whichever copy it cached
+first. The symptom is a demo-app build failing against stale `.d.ts`
+(e.g. `Property 'x' does not exist on type ...` for something the branch just
+added), which looks like a source bug and isn't. The `Setup demo app` step
+asserts the installed version equals the packed one, so a recurrence fails
+immediately with a clear message instead. Don't remove the bump to "keep the
+version clean" — nothing is committed or tagged (`--no-git-tag-version`).
+
 ## Release process
 
 - Work happens on branches named `feature/*` or `hotfix/*`, PR'd into `development`.
