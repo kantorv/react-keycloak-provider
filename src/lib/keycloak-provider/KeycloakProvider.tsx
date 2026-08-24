@@ -1,5 +1,5 @@
 // KeycloakProvider.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import type { KeycloakConfig, KeycloakInitOptions } from 'keycloak-js';
 import Keycloak from 'keycloak-js';
 import { KeycloakService } from './keycloakService';
@@ -8,7 +8,18 @@ import { KeycloakService } from './keycloakService';
 interface KeycloakContextType {
   keycloak: Keycloak | null;
   authenticated: boolean;
-  failed?: boolean; // true if server offline / timeout
+  /**
+   * true while `keycloak.init()` is still in flight — i.e. whether there is a
+   * session is not known yet. false in both settled outcomes, so it is never a
+   * synonym for "anonymous". Gate role-dependent UI on this, not on
+   * `authenticated`, to avoid rendering an anonymous tree and remounting it
+   * when the token lands.
+   */
+  initializing: boolean;
+  /** true if init rejected (server offline / blocked 3rd-party cookies) or the timeout backstop fired */
+  failed?: boolean;
+  /** the provider's `loader` prop, so a consumer can gate its own subtree on `initializing` */
+  loader?: React.ReactNode;
 }
 
 interface KeycloakProviderProps {
@@ -16,16 +27,22 @@ interface KeycloakProviderProps {
   initOptions?: KeycloakInitOptions;
   children: React.ReactNode;
   disabled?: boolean; // new prop
-  timeout?: number; 
+  timeout?: number;
   loader?:React.ReactNode;
 }
 
 // Timeout in milliseconds for Keycloak server to respond
 const KEYCLOAK_READY_TIMEOUT_MS = 12000;
 
+// Module-level so the default does not change identity on every render
+const DEFAULT_LOADER = <>Loading...</>;
+
+type InitStatus = 'initializing' | 'ready' | 'failed';
+
 const KeycloakContext = createContext<KeycloakContextType>({
   keycloak: null,
   authenticated: false,
+  initializing: false,
   failed: false,
 });
 
@@ -39,32 +56,42 @@ export const KeycloakProvider = ({
   children,
    disabled = false,
    timeout = KEYCLOAK_READY_TIMEOUT_MS,
-   loader =  <>Loading...</>
+   loader = DEFAULT_LOADER
 }: KeycloakProviderProps) => {
   const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [timedOut, setTimedOut] = useState(false);
+  const [status, setStatus] = useState<InitStatus>(disabled ? 'ready' : 'initializing');
 
+  // Consumers pass `config` / `initOptions` as inline object literals (that is what
+  // the README shows), so they are fresh references on every render. Reading them
+  // through a ref keeps the init effect from tearing down its listeners and arming
+  // a new timeout on each one, without asking consumers to memoize anything.
+  const propsRef = useRef({ config, initOptions, timeout });
+  propsRef.current = { config, initOptions, timeout };
 
-  
   useEffect(() => {
     if (disabled) {
-      // If disabled, consider ready immediately and skip initialization
-      setReady(true);
+      // If disabled, consider it settled immediately and skip initialization
+      setKeycloak(null);
       setAuthenticated(false);
-      setTimedOut(false);
+      setStatus('ready');
       return;
     }
 
+    const { config, initOptions, timeout } = propsRef.current;
     const keycloakService = KeycloakService.getInstance({ config, initOptions });
 
+    let settled = false;
+
     const onReady = () => {
-      const instance = keycloakService.getKeycloakInstance();
-      if (instance) {
-        setKeycloak(instance);
-        setReady(true);
-      }
+      settled = true;
+      setKeycloak(keycloakService.getKeycloakInstance());
+      setStatus('ready');
+    };
+
+    const onInitError = () => {
+      settled = true;
+      setStatus('failed');
     };
 
     const onAuthSuccess = () => setAuthenticated(true);
@@ -72,40 +99,52 @@ export const KeycloakProvider = ({
 
     // Register listeners
     keycloakService.on('keycloak-ready', onReady);
+    keycloakService.on('init-error', onInitError);
     keycloakService.on('auth-success', onAuthSuccess);
     keycloakService.on('auth-error', onAuthError);
 
-    // Timeout fallback in case server is offline
+    // The service is a page-lifetime singleton, so init may already have settled
+    // before this provider mounted (a remount, StrictMode's second pass, a second
+    // provider). Those listeners will never fire — replay what was missed.
+    const initState = keycloakService.getInitState();
+    if (initState === 'ready') {
+      setAuthenticated(keycloakService.isAuthenticated());
+      onReady();
+    } else if (initState === 'failed') {
+      setAuthenticated(false);
+      onInitError();
+    }
+
+    // Backstop for an init that never settles either way. The failure path is
+    // handled by 'init-error' above, so this should only fire on a genuine hang.
     const _timeout = setTimeout(() => {
-      if (!ready) {
-        console.warn('KeycloakService did not become ready within timeout');
-        setTimedOut(true);
-      }
+      if (settled) return;
+      console.warn('KeycloakService did not become ready within timeout');
+      setStatus('failed');
     }, timeout);
 
     // Cleanup on unmount
     return () => {
       clearTimeout(_timeout);
       keycloakService.off('keycloak-ready', onReady);
+      keycloakService.off('init-error', onInitError);
       keycloakService.off('auth-success', onAuthSuccess);
       keycloakService.off('auth-error', onAuthError);
     };
-  }, [config, initOptions, ready]);
+  }, [disabled]);
 
-  // Show loading until ready or timed out
-  if (!ready && !timedOut) {
-    return <>{loader}</>;
-  }
+  const value = useMemo<KeycloakContextType>(() => ({
+    keycloak: disabled ? null : keycloak,
+    authenticated: disabled ? false : authenticated,
+    initializing: disabled ? false : status === 'initializing',
+    failed: disabled ? false : status === 'failed',
+    loader,
+  }), [disabled, keycloak, authenticated, status, loader]);
 
-  // Provide safe context even if server is offline
+  // children render immediately — including while init is in flight. Consumers
+  // gate whatever actually depends on identity on `initializing`.
   return (
-    <KeycloakContext value={{
-
-      keycloak: disabled ? null : keycloak,
-      authenticated: disabled ? false : authenticated,
-      failed: disabled ? false : timedOut
-
-     }}>
+    <KeycloakContext value={value}>
       {children}
     </KeycloakContext>
   );
