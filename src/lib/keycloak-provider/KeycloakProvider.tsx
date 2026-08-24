@@ -113,6 +113,11 @@ export const KeycloakProvider = ({
     } else if (initState === 'failed') {
       setAuthenticated(false);
       onInitError();
+    } else {
+      // Still in flight. `status` can be a stale 'ready' here — this provider was
+      // mounted with `disabled` true and has just been re-enabled — and leaving it
+      // would report a settled anonymous session while init is actually running.
+      setStatus('initializing');
     }
 
     // Backstop for an init that never settles either way. The failure path is

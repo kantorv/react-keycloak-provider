@@ -28,6 +28,7 @@ export class KeycloakService {
 
   private authenticated = false;
   private initState: KeycloakInitState = 'initializing';
+  private readyAnnounced = false;
 
   private constructor(props: KeycloakServiceProps) {
     this.initKeycloak(props);
@@ -56,16 +57,18 @@ export class KeycloakService {
     this.keycloak.onReady = (authenticated?: boolean) => {
       this.authenticated = !!authenticated;
       this.initState = 'ready';
-      this.readyListeners.forEach(listener => listener());
+      this.announceReady();
     };
 
     this.keycloak
       .init(initOptions ?? { onLoad: 'login-required' })
       .then((authenticated: boolean) => {
         this.authenticated = authenticated;
-        // onReady fires just before init() resolves, so this is normally a no-op —
-        // it also settles adapters that never call onReady at all.
+        // onReady fires just before init() resolves, so this is normally a no-op.
+        // It is what settles an adapter that resolves without calling onReady at
+        // all: announceReady is idempotent, so subscribers are notified exactly once.
         this.initState = 'ready';
+        this.announceReady();
         if (authenticated) {
           this.authSuccessListeners.forEach(listener => listener());
         } else {
@@ -82,6 +85,13 @@ export class KeycloakService {
         this.initErrorListeners.forEach(listener => listener());
         this.authErrorListeners.forEach(listener => listener());
       });
+  }
+
+  /** Fires 'keycloak-ready' at most once, whichever init path gets there first. */
+  private announceReady(): void {
+    if (this.readyAnnounced) return;
+    this.readyAnnounced = true;
+    this.readyListeners.forEach(listener => listener());
   }
 
   public getKeycloakInstance(): Keycloak | null {

@@ -85,8 +85,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  consoleError.mockRestore();
-  consoleWarn.mockRestore();
+  // restoreAllMocks, not per-spy mockRestore: a failing assertion must not leak
+  // a spy (console, or KeycloakService.prototype) into the tests that follow.
+  jest.restoreAllMocks();
 });
 
 test('renders children immediately while init is still in flight', () => {
@@ -171,9 +172,6 @@ test('the init effect runs once per mount when initOptions is an inline object l
   // four events subscribed, exactly once — no teardown/re-arm on the re-renders
   expect(onSpy).toHaveBeenCalledTimes(4);
   expect(offSpy).not.toHaveBeenCalled();
-
-  onSpy.mockRestore();
-  offSpy.mockRestore();
 });
 
 test('a provider mounted after init already settled picks up the settled state', async () => {
@@ -200,6 +198,38 @@ test('disabled skips Keycloak entirely and never gates children', () => {
   expect(text('failed')).toBe('false');
   expect(text('keycloak')).toBe('null');
   expect(mockAdapter.instances).toHaveLength(0);
+});
+
+test('re-enabling a disabled provider reports initializing again', () => {
+  const tree = (disabled: boolean) => (
+    <KeycloakProvider
+      config={{ url: 'http://localhost:8282/', realm: 'demo', clientId: 'react-client' }}
+      initOptions={{ onLoad: 'check-sso' }}
+      timeout={100000}
+      disabled={disabled}
+    >
+      <Probe />
+    </KeycloakProvider>
+  );
+
+  const { rerender } = render(tree(true));
+  expect(text('initializing')).toBe('false');
+
+  // init is genuinely in flight now, so "settled anonymous" would be a lie
+  rerender(tree(false));
+  expect(text('initializing')).toBe('true');
+  expect(text('authenticated')).toBe('false');
+  expect(text('failed')).toBe('false');
+});
+
+test('settles even when the adapter resolves init without ever calling onReady', async () => {
+  mockAdapter.init = () => Promise.resolve(false);
+
+  renderProvider();
+
+  await waitFor(() => expect(text('initializing')).toBe('false'));
+  expect(text('failed')).toBe('false');
+  expect(text('keycloak')).toBe('instance');
 });
 
 test('an init that rejects long after mount still settles the provider', async () => {
