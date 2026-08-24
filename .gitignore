@@ -11,6 +11,9 @@
 # production
 /build
 
+# `yarn pack` output (ci/tests reproduce the CI flow locally)
+*.tgz
+
 # misc
 .DS_Store
 .env.local

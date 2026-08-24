@@ -1,5 +1,9 @@
 ### React Keycloak Provider
 
+> **Changed in 2.2.0**: `children` render immediately — the provider no longer replaces
+> your whole app with `loader` while `keycloak.init()` is in flight, and it settles as soon
+> as init rejects instead of waiting out `timeout`. Gate on the new `initializing` value
+> where you actually need the session. See the root `README.md` for the full note.
 
 ##### usage
 ```tsx
@@ -35,17 +39,18 @@ root.render(
 ```tsx
 
 // App.tsx
-import { useKeycloak } from './lib/keycloak-provider/useKeycloakContext';
+import { useKeycloak } from './lib/keycloak-provider/KeycloakProvider';
 import Button from '@mui/material/Button';
 
 const AppBar = ()=> {
-    const {keycloak, authenticated} = useKeycloak();
+    const {keycloak, authenticated, initializing, loader} = useKeycloak();
 
-
+    // "not known yet" is distinct from "anonymous"
+    if (initializing) return <>{loader}</>;
 
     return (
         <div> 
-            {keycloak & authenticated? 
+            {keycloak && authenticated? 
                 <Button onClick={keycloak.logout} label="Logout" /> :  
                 <Button onClick={keycloak.login} label="Login" />
             } 
