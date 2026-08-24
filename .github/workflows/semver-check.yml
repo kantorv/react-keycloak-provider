@@ -14,6 +14,13 @@ on:
       - edited
       - opened
       - synchronize
+      # Without these two, the fix for a failed run — adding the missing label —
+      # does not re-run the check: `edited` covers the title/body/base, not
+      # labels, and a manual re-run replays the ORIGINAL event payload, which
+      # still has no label on it. The gate would stay red until someone pushed
+      # an unrelated commit.
+      - labeled
+      - unlabeled
     branches:
       - 'development'
       - 'main'
