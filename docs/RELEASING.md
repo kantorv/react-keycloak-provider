@@ -47,6 +47,13 @@ gh workflow run cut-release.yml --ref development -f bump=minor -f version=2.2.0
 - Creates `release/X.Y.Z` from `development` and pushes it.
 - Opens a **draft PR** `release/X.Y.Z → main`, titled *"Release X.Y.Z"*, labeled
   with the bump.
+- Dispatches `tests.yml` against the new branch, so the E2E suite runs on the
+  tree you are about to QA. This has to be an explicit dispatch: the push that
+  created the branch was made with `GITHUB_TOKEN`, and GitHub does not start
+  workflow runs for `GITHUB_TOKEN` events. If the dispatch fails, the job warns
+  rather than failing (the branch and PR already exist) and tells you to run
+  `gh workflow run tests.yml --ref release/X.Y.Z` yourself — check the run
+  summary.
 
 The `version` input is a safety valve, not a free-form field: it must be one of
 the three versions reachable from the latest tag (`major`/`minor`/`patch`), and
@@ -61,9 +68,16 @@ not the branch name, is what `release.yml` acts on.
 
 ## 2. QA & hardening (SDLC Phase 3)
 
-QA runs against `release/X.Y.Z`. `tests.yml` runs the full Selenium/Keycloak
-E2E suite on every push to it, and to the `fix/*` branches below. Fix bugs **on
-the release branch**, never by merging new features:
+QA runs against `release/X.Y.Z`. The full Selenium/Keycloak E2E suite covers the
+branch from three directions: the cut dispatches it once against the fresh
+branch, every human push to `release/X.Y.Z` or a `fix/*` branch triggers it, and
+you can start it against any ref yourself from **Actions → tests → Run
+workflow** (or `gh workflow run tests.yml --ref release/X.Y.Z`). Automated
+pushes are the gap to know about — anything pushed by a workflow's
+`GITHUB_TOKEN` does not trigger it, which is exactly why the cut dispatches the
+run explicitly.
+
+Fix bugs **on the release branch**, never by merging new features:
 
 ```bash
 git checkout release/X.Y.Z
@@ -164,6 +178,9 @@ bump and any release-branch fixes, and the next cut would revert them.
 | **Back-merge conflict / rejected push** | Resolve the auto-opened `sync/main-to-dev-X.Y.Z` PR into `development`. |
 | **Semver check failed on a hotfix PR** | Add the `patch` label — non-release PRs into `main` require it. |
 | **npm publish failed on auth** | Publishing uses npm trusted publishing (OIDC): `release.yml` needs `id-token: write` and npm ≥ 11.5.1, which the *Update npm* step installs. |
+| **No E2E run on the release branch** | The cut's dispatch failed (check the *Cut release* run summary). Start it manually: `gh workflow run tests.yml --ref release/X.Y.Z`. |
+| **`release.yml` failed pushing to `main`** | `release-it` commits the version bump and tag directly to `main`. If `main` is given branch protection that blocks direct pushes, it must allow the `github-actions` app (or the release will never complete). |
+| **No checks at all on the release PR** | Expected: the draft PR is created by `GITHUB_TOKEN`, so `pull_request` workflows — including `semver-check.yml` — do not run on it. Harmless today, since `release/* → main` skips the label check anyway. **Do not make "Check release label" a required status check on `main`**: a release PR could never satisfy it. |
 
 ---
 

@@ -43,13 +43,17 @@ on its own branch, and merged into `main`.
 
 - Run **`cut-release.yml`** from the Actions UI on `development`. It resolves
   the next version `X.Y.Z` from the latest tag plus the intended bump, creates
-  `release/X.Y.Z`, and opens a **draft PR** into `main` labeled with that bump.
+  `release/X.Y.Z`, opens a **draft PR** into `main` labeled with that bump, and
+  starts the E2E suite against the new branch.
 - **No new features** go into the release branch.
 - `development` stays open for the next release's work.
 
 ### Phase 3 — QA & hardening
 
-- QA exercises `release/X.Y.Z`. `tests.yml` runs on pushes to it.
+- QA exercises `release/X.Y.Z`. The cut dispatches `tests.yml` against the new
+  branch, and every human push to it runs the suite again. (A push made by a
+  workflow's own `GITHUB_TOKEN` never triggers a run — hence the explicit
+  dispatch.)
 - Bugs are fixed on `fix/*` branches cut from the release branch and merged
   back into it — never by merging fresh features from `development`.
 

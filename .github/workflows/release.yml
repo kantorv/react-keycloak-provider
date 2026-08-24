@@ -157,7 +157,19 @@ jobs:
             reason="$1"
             sync_branch="sync/main-to-dev-${VERSION}"
             git checkout -B "${sync_branch}" origin/main
-            git push -u origin "${sync_branch}"
+            # A leftover branch from an earlier attempt at this same version
+            # would otherwise fail the push and take the job down after the
+            # release already shipped. The branch is a throwaway pointer at
+            # main, so re-pointing it is safe.
+            git push -u origin "${sync_branch}" \
+              || git push --force-with-lease origin "HEAD:${sync_branch}"
+            # Same reason: a PR may already be open for that branch.
+            url=$(gh pr list --head "${sync_branch}" --base development \
+                    --state open --json url --jq '.[0].url // empty')
+            if [ -n "${url}" ]; then
+              echo "::warning::Back-merge needs a human (${reason}); sync PR already open: ${url}"
+              return 0
+            fi
             body=$(cat <<EOF
           Auto-opened by release.yml — the back-merge of main into development
           after ${VERSION} could not be completed automatically (${reason}) and

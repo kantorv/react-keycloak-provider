@@ -14,6 +14,13 @@
 #
 # Prereq: the repo setting "Allow GitHub Actions to create and approve pull
 # requests" must be ON for `gh pr create --draft` to succeed.
+#
+# Why this workflow dispatches tests.yml explicitly at the end: GitHub does not
+# start workflow runs for events triggered by GITHUB_TOKEN (its recursion
+# guard), so the `git push` that creates release/X.Y.Z below does NOT fire
+# tests.yml's `release/*` push trigger. Without the explicit dispatch, a release
+# with no QA fixes would publish a tree the E2E suite never ran against.
+# workflow_dispatch is the documented exception to that guard.
 name: Cut release
 
 on:
@@ -36,6 +43,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write   # dispatch tests.yml onto the new release branch
 
 jobs:
   cut:
@@ -178,18 +186,44 @@ jobs:
           echo "draft_pr=${url}" >> "$GITHUB_OUTPUT"
           echo "${url}"
 
+      # The push above cannot trigger tests.yml (GITHUB_TOKEN recursion guard —
+      # see the header), so start the E2E run explicitly. Non-fatal: the branch
+      # and the draft PR already exist at this point, and failing the job here
+      # would leave them behind with a red run that suggests the cut itself
+      # broke. A warning plus the manual command is the honest outcome.
+      - name: Run the E2E suite against the release branch
+        id: e2e
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.create.outputs.branch }}
+        run: |
+          set -uo pipefail
+          if gh workflow run tests.yml --ref "${BRANCH}"; then
+            echo "::notice::Dispatched tests.yml against ${BRANCH}."
+            echo "dispatched=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Could not dispatch tests.yml against ${BRANCH}. QA must start it by hand: gh workflow run tests.yml --ref ${BRANCH}"
+            echo "dispatched=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Job summary
         env:
           V: ${{ steps.resolve.outputs.version }}
           BUMP: ${{ steps.resolve.outputs.bump }}
           BRANCH: ${{ steps.create.outputs.branch }}
           DRAFT_PR: ${{ steps.pr.outputs.draft_pr }}
+          E2E: ${{ steps.e2e.outputs.dispatched }}
         run: |
           {
             echo "## Cut release ${V}"
             echo ""
             echo "- branch: \`${BRANCH}\` (cut from \`development\`)"
             echo "- draft PR (labeled \`${BUMP}\`): ${DRAFT_PR}"
+            if [ "${E2E}" = "true" ]; then
+              echo "- E2E suite: dispatched against \`${BRANCH}\`"
+            else
+              echo "- E2E suite: **not started** — run \`gh workflow run tests.yml --ref ${BRANCH}\`"
+            fi
             echo ""
             echo "Next: QA on this branch, then merge the draft PR into \`main\` — \`release.yml\` does the rest."
           } >> "$GITHUB_STEP_SUMMARY"

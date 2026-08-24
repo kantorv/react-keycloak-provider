@@ -145,7 +145,7 @@ for the exact Chrome version pinned (`CHROME_VERSION` env var) if reproducing lo
 
 This is the most informative file for understanding "what does correct behavior
 look like end-to-end." On push to `feature/*`, `hotfix/*`, `release/*` or `fix/*`
-branches it:
+branches — or on a manual `workflow_dispatch` against any ref — it:
 1. Downloads/caches a pinned Chrome + chromedriver build.
 2. Loads/caches the pinned Keycloak Docker image.
 3. `yarn install`, bumps a `-rc` prerelease version, `yarn build`, `yarn pack`.
@@ -188,6 +188,11 @@ releasing**:
   `development`) resolves the next version from the latest tag plus the intended
   bump, creates `release/X.Y.Z`, and opens a **draft PR into `main`** labeled with
   that bump. QA happens on that branch; bugs are fixed via `fix/*` PRs into it.
+- **A workflow's own pushes never trigger other workflows** (GitHub's
+  `GITHUB_TOKEN` recursion guard). That is why `cut-release.yml` ends by
+  dispatching `tests.yml` at the new release branch rather than relying on
+  `tests.yml`'s `release/*` push trigger, and why the draft release PR carries no
+  `semver-check` run. Don't "simplify" either one away.
 - `release.yml` runs on a `release/*` **or** `hotfix/*` PR merged into `main`:
   builds, then `release-it` does version bump/tag/GitHub release/npm publish. The
   bump is label-driven for `release/*` (default `minor`) and forced `patch` for
