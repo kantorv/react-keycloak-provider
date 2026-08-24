@@ -60,8 +60,16 @@ referencing it — treat that story as broken/stale, not as a guide to existing 
 (`getInstance()` keeps a single `Keycloak` instance for the lifetime of the page).
 It owns:
 - the actual `keycloak-js` instance and its `.init()` call,
-- three listener arrays (`auth-success`, `auth-error`, `keycloak-ready`) with
-  `on()` / `off()` for subscription.
+- four listener arrays (`auth-success`, `auth-error`, `keycloak-ready`,
+  `init-error`) with `on()` / `off()` for subscription,
+- a settled `initState` (`'initializing' | 'ready' | 'failed'`) readable via
+  `getInitState()` / `isAuthenticated()`, because a subscriber that registers
+  *after* init settled never receives the event and has to read what it missed.
+
+`init-error` fires when `keycloak.init()` **rejects** — an unreachable auth server,
+or a browser that blocks the third-party-cookie probe that keycloak-js awaits before
+`onReady`. That is a settled outcome, not a hang, which is why it is a distinct event
+from `auth-error` (which also fires for an ordinary anonymous `check-sso`).
 
 Because it's a singleton, **the first set of `{ config, initOptions }` passed in
 wins** — calling `getInstance()` again with different config after the first
@@ -69,16 +77,25 @@ call does *not* re-initialize Keycloak. Mounting `<KeycloakProvider>` twice with
 different configs in the same page will silently reuse the first instance.
 
 **`KeycloakProvider` (`KeycloakProvider.tsx`)** — a React component that:
-1. On mount, if `disabled` is true, immediately marks itself "ready" with
+1. On mount, if `disabled` is true, immediately marks itself settled with
    `keycloak: null`, `authenticated: false`, and skips Keycloak entirely.
-2. Otherwise gets the `KeycloakService` singleton, subscribes to its events,
-   and renders `loader` (default: `Loading...`) until either `keycloak-ready`
-   fires or `timeout` ms elapse (default 12000ms / `KEYCLOAK_READY_TIMEOUT_MS`).
-3. Exposes `{ keycloak, authenticated, failed }` via Context using the
-   **React 19 Context-as-Provider shorthand** (`<KeycloakContext value={...}>`,
-   not `<KeycloakContext.Provider value={...}>`). See Gotchas below — this is
-   load-bearing for which React versions actually work.
-4. `useKeycloak()` is just `useContext(KeycloakContext)`.
+2. Otherwise gets the `KeycloakService` singleton, subscribes to its events, and
+   **replays the service's current `initState`** in case init already settled.
+3. **Always renders `children`** — it never withholds the app tree. Consumers gate
+   whatever depends on identity on the `initializing` context value themselves.
+4. Tracks one `status` (`'initializing' | 'ready' | 'failed'`). It settles on
+   `keycloak-ready` *or* on `init-error`; `timeout` (default 12000ms /
+   `KEYCLOAK_READY_TIMEOUT_MS`) is only a backstop for an init that never settles
+   either way, **not** the failure path.
+5. Exposes `{ keycloak, authenticated, initializing, failed, loader }` via Context
+   using the **React 19 Context-as-Provider shorthand** (`<KeycloakContext value={...}>`,
+   not `<KeycloakContext.Provider value={...}>`) — matching the `react: ">=19"` peer range.
+   The value is `useMemo`'d.
+6. `useKeycloak()` is just `useContext(KeycloakContext)`.
+
+`initializing` is load-bearing and deliberately distinct from `!authenticated`: it means
+"we don't know yet whether there is a session", so a consumer that dispatches on role can
+avoid rendering an anonymous tree and remounting it when the token lands.
 
 **Public surface (`src/index.ts`)**: `KeycloakProvider`, `useKeycloak`, and the
 re-exported `KeycloakConfig` / `KeycloakInitOptions` types from `keycloak-js`.
@@ -89,7 +106,9 @@ Nothing else in `src/lib` is intended to be imported directly by consumers.
 ```bash
 yarn install        # install deps (yarn.lock is the lockfile of record, not npm)
 yarn build           # rollup -c → build/index.js (cjs), build/index.es.js (esm), build/index.d.ts
-yarn test            # react-scripts test (Jest) — note: no test/ files currently exist in src/
+yarn test            # react-scripts test (Jest) — watch mode
+CI=true yarn test --watchAll=false                # full suite, once
+CI=true yarn test --watchAll=false -t "<name>"    # one test by name
 yarn storybook       # storybook dev -p 6006
 yarn build-storybook # static storybook build
 yarn release         # release-it — bumps version, tags, pushes, creates GH release, publishes to npm
@@ -138,6 +157,18 @@ There's a comment in the workflow noting this approach exists because tests
 sometimes pass against source but fail once installed from a packed tarball —
 keep that in mind if asked to "speed up CI by testing source directly."
 
+**Why the workflow bumps to an `-rc.<run>.<attempt>` version before packing.**
+`yarn add <tarball>` caches by `name@version`, and setup-node's `cache: 'yarn'`
+restores that cache across runs. `release-it` only bumps the version on merge to
+`development`, so without the bump every feature-branch run packs *different*
+contents under the *same* version — and yarn installs whichever copy it cached
+first. The symptom is a demo-app build failing against stale `.d.ts`
+(e.g. `Property 'x' does not exist on type ...` for something the branch just
+added), which looks like a source bug and isn't. The `Setup demo app` step
+asserts the installed version equals the packed one, so a recurrence fails
+immediately with a clear message instead. Don't remove the bump to "keep the
+version clean" — nothing is committed or tagged (`--no-git-tag-version`).
+
 ## Release process
 
 - Work happens on branches named `feature/*` or `hotfix/*`, PR'd into `development`.
@@ -157,22 +188,24 @@ keep that in mind if asked to "speed up CI by testing source directly."
   from whatever the missing `Loading` component was.
 - **React 19 Context shorthand**: `KeycloakProvider.tsx` renders
   `<KeycloakContext value={...}>` instead of `<KeycloakContext.Provider value={...}>`.
-  This syntax requires React 19+, but `package.json` `peerDependencies` claims
-  `react: ">=18"`. Consumers on React 18 will break. Flag this if asked to touch
-  either the peer range or the Provider syntax — they're currently inconsistent.
+  This syntax requires React 19+, which `package.json` `peerDependencies`
+  (`react: ">=19"`) now matches — keep the two in step if either is touched.
 - **`KeycloakService` singleton ignores subsequent config.** Re-mounting
   `KeycloakProvider` with new `config`/`initOptions` after first init has no effect
   on the already-created Keycloak instance.
 - **`initOptions` default is unreachable**: `keycloakService.ts` does
   `initOptions ?? { onLoad: 'login-required' }`, but `KeycloakProvider` already
   defaults the prop to `{}` (truthy), so that fallback default never fires in practice.
-- **`src/lib/keycloak-provider/README.md`** usage sample has `keycloak & authenticated`
-  (bitwise AND) where `keycloak && authenticated` was clearly intended — don't
-  copy that snippet verbatim if updating docs.
-- **Effect dependency on `ready`** (`KeycloakProvider.tsx`'s `useEffect` deps
-  include `ready`): since `ready` only flips once and the effect tears down/recreates
-  listeners on every dependency change, be careful about reasoning about re-run
-  semantics here if modifying the effect.
+- **The init effect deps are `[disabled]` on purpose.** `config` / `initOptions` /
+  `timeout` are read through a ref instead, because consumers pass them as inline
+  object literals (that is what both READMEs show) and including them re-ran the
+  effect on every render — tearing down all listeners and arming a fresh timeout
+  each time. Re-running would be pointless anyway: the service singleton ignores
+  config after the first init. Don't "fix" the exhaustive-deps warning by adding
+  them back; the ref is the fix.
+- **`ci/tests/App.tsx` is a real consumer of the public contract.** It gates its
+  auth controls on `initializing`, which is what keeps the Selenium test from
+  clicking `Login` before `keycloak` exists. Update it alongside any context change.
 - **Two READMEs exist** with overlapping but slightly different usage examples:
   root `README.md` and `src/lib/keycloak-provider/README.md`. Keep both in sync
   if changing the public API or prop list.
