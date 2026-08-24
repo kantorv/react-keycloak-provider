@@ -1,53 +1,84 @@
-# For more information see: https://github.com/actions/create-release
+# Production release — fires when a PR is MERGED into `main` from EITHER a
+# release/* OR a hotfix/* branch.
+#
+# This used to trigger on every feature/* PR merged into `development`, which
+# published a new npm version per merged PR. `development` is now the
+# integration branch and publishes nothing; a release is an explicit cut
+# (cut-release.yml) that is QA'd on its branch and shipped by merging into
+# `main`. See docs/RELEASING.md and docs/SDLC.md.
+#
+# The only difference between the two paths is the version bump:
+#   - release/* : label-driven (major/patch, else the MINOR default). The label
+#     is put on the PR by cut-release.yml and matches the branch name.
+#   - hotfix/*  : always a forced PATCH bump.
+# Everything downstream (build, release-it tag + GitHub Release + npm publish,
+# back-merge into development) is shared.
+#
+# A feature PR merged straight into main does NOT trigger a release (the job
+# `if:` guard requires a release/* or hotfix/* head ref).
 permissions:
   contents: write
   pages: write
-  id-token: write
-
-# on:
-#   push:
-#     # Sequence of patterns matched against refs/tags
-#     tags:
-#       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  id-token: write        # npm trusted publishing (OIDC)
+  pull-requests: write   # open the sync-back PR if the back-merge conflicts
 
 on:
   pull_request:
     types:
       - closed
     branches:
-      - 'development'
+      - 'main'
 
 name: release
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
-    if: github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'feature/') || startsWith(github.event.pull_request.head.ref, 'hotfix/'))
+    if: >
+      github.event.pull_request.merged == true &&
+      (
+        startsWith(github.event.pull_request.head.ref, 'release/') ||
+        startsWith(github.event.pull_request.head.ref, 'hotfix/')
+      )
     name: Create Release
     runs-on: ubuntu-latest
-    steps:
-      - name: Get the pull request labels
-        id: labels
-        run: echo "labels=$(jq -r '.pull_request.labels[].name' $GITHUB_EVENT_PATH | tr '\n' ',')" >> $GITHUB_ENV
+    outputs:
+      version: ${{ steps.released.outputs.version }}
 
+    steps:
+      # hotfix/* is always patch; release/* is label-driven (major/patch, else
+      # the minor default). Labels are read through env rather than inlined
+      # into the script.
       - name: Determine the release type
         id: release_type
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
-          labels=${{ env.labels }}
-          if [[ "$labels" == *"major"* ]]; then
+          set -euo pipefail
+          if [[ "$HEAD_REF" == hotfix/* ]]; then
+            echo "Hotfix branch -> forced PATCH bump."
+            echo "release_type=patch" >> $GITHUB_ENV
+          elif [[ "$LABELS" == *"major"* ]]; then
             echo "release_type=major" >> $GITHUB_ENV
-          elif [[ "$labels" == *"minor"* ]]; then
-            echo "release_type=minor" >> $GITHUB_ENV
-          elif [[ "$labels" == *"patch"* ]]; then
+          elif [[ "$LABELS" == *"patch"* ]]; then
             echo "release_type=patch" >> $GITHUB_ENV
           else
-            echo "No valid release label found."
-            exit 1
+            echo "Release branch -> MINOR default (labels: '$LABELS')."
+            echo "release_type=minor" >> $GITHUB_ENV
           fi
 
-      - name: Checkout code
+      # Check out main itself, not the PR merge ref: release-it commits the
+      # version bump and pushes the tag, so HEAD has to be the branch.
+      - name: Checkout main (full history + tags)
         uses: actions/checkout@v6
         with:
+          ref: main
           fetch-depth: 0
+
       - name: git config
         run: |
           git config user.name "${GITHUB_ACTOR}"
@@ -75,38 +106,80 @@ jobs:
       #   run: yarn test --ci
 
 
-
-
       - name: Build package
         run: yarn build
 
       - name: Release-it
-        run: | # # -i  ${{ env.release_type }}
-          yarn release --ci  --increment=$release_type
+        run: | # bumps package.json, tags, GitHub Release, npm publish
+          yarn release --ci --increment=$release_type
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
-      
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-#      - id: deploy-storybook
-#        uses: bitovi/github-actions-storybook-to-github-pages@v1.0.3
-#        with:
-#          install_command: yarn install
-#          build_command: yarn build-storybook
-#          path: storybook-static
-#        env:
-#          GH_TOKEN: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
+      # The published version, read back from the file release-it just bumped.
+      # Tags in this repo are bare X.Y.Z (release-it's default git.tagName),
+      # so this doubles as the tag name.
+      - name: Record the released version
+        id: released
+        run: |
+          set -euo pipefail
+          version=$(jq --raw-output .version package.json)
+          echo "Released ${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-      # - name: Create Release
-      #   id: create_release
-      #   uses: actions/create-release@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-      #   with:
-      #     tag_name: ${{ github.ref }}
-      #     release_name: Release ${{ github.ref }}
-      #     body: |
-      #       Changes in this Release
-      #       - First Change
-      #       - Second Change
-      #     draft: false
-      #     prerelease: false
+  sync_to_development:
+    needs: [release]
+    name: Sync main back to development
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (full history)
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      # One sync mechanism for BOTH release/* and hotfix/*: attempt a direct
+      # back-merge of main -> development; only if that fails do we open a sync
+      # PR for a human to resolve — never a force-push. A push rejection
+      # (branch protection, a race) takes the same fallback as a conflict.
+      - name: Back-merge main into development
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          open_sync_pr() {
+            reason="$1"
+            sync_branch="sync/main-to-dev-${VERSION}"
+            git checkout -B "${sync_branch}" origin/main
+            git push -u origin "${sync_branch}"
+            body=$(cat <<EOF
+          Auto-opened by release.yml — the back-merge of main into development
+          after ${VERSION} could not be completed automatically (${reason}) and
+          needs a human. development must carry the release/hotfix changes, or
+          the next release cut will revert them.
+          EOF
+          )
+            url=$(gh pr create --base development --head "${sync_branch}" \
+              --title "[SYNC] Merge ${VERSION} from main back to development" \
+              --body "${body}")
+            echo "::warning::Back-merge needs a human (${reason}); opened sync PR: ${url}"
+          }
+
+          git fetch origin main development
+          git checkout -B development origin/development
+          if git merge --no-ff origin/main -m "[CHORE] sync main into development after ${VERSION}"; then
+            if git push origin development; then
+              echo "::notice::Synced main -> development after ${VERSION}."
+            else
+              open_sync_pr "push to development was rejected"
+            fi
+          else
+            git merge --abort
+            open_sync_pr "merge conflict"
+          fi

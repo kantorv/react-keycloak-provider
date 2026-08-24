@@ -9,6 +9,10 @@ on:
     branches:
       - 'feature/*'
       - 'hotfix/*'
+      # QA during a release freeze happens on the release branch and on the
+      # fix/* branches merged into it, so both have to run the E2E suite.
+      - 'release/*'
+      - 'fix/*'
 
 
 env:
