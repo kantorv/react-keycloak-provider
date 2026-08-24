@@ -1,0 +1,229 @@
+# Cuts a release branch — SDLC Phase 2 (Feature Freeze & Release Cut).
+#
+# Manual dispatch from `development`: resolves the next semantic version from
+# the latest stable tag plus the intended bump, branches `release/X.Y.Z` off
+# `development`, and opens a DRAFT PR into `main` carrying the bump label.
+#
+# The label on that PR is what `release.yml` reads to pick release-it's
+# --increment when the PR is merged, so the branch name and the version that
+# actually ships stay in agreement. Relabel the PR before merging only if you
+# also mean to change the version (see docs/RELEASING.md).
+#
+# Humans QA on the branch by opening fix PRs back into `release/X.Y.Z`, then
+# mark the draft PR ready and merge it. `release.yml` takes over on that merge.
+#
+# Prereq: the repo setting "Allow GitHub Actions to create and approve pull
+# requests" must be ON for `gh pr create --draft` to succeed.
+#
+# Why this workflow dispatches tests.yml explicitly at the end: GitHub does not
+# start workflow runs for events triggered by GITHUB_TOKEN (its recursion
+# guard), so the `git push` that creates release/X.Y.Z below does NOT fire
+# tests.yml's `release/*` push trigger. Without the explicit dispatch, a release
+# with no QA fixes would publish a tree the E2E suite never ran against.
+# workflow_dispatch is the documented exception to that guard.
+name: Cut release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Intended version bump, applied to the latest stable tag.
+        type: choice
+        options:
+          - minor
+          - major
+          - patch
+        default: minor
+        required: true
+      version:
+        description: Explicit version override, e.g. 2.4.0. Leave blank to compute it from the latest tag. Must be reachable from that tag by one of major/minor/patch.
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write   # dispatch tests.yml onto the new release branch
+
+jobs:
+  cut:
+    name: Cut release/X.Y.Z from development
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: development
+          fetch-depth: 0
+
+      # Tags in this repo are bare X.Y.Z, not vX.Y.Z — release-it's default
+      # git.tagName is "${version}" and the "release-it" block in package.json
+      # does not override it. A leading v is tolerated when reading a tag, but
+      # never produced.
+      - name: Resolve next version
+        id: resolve
+        env:
+          INPUT_BUMP: ${{ inputs.bump }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          latest=$(git tag --list \
+                   | sed -E 's/^v//' \
+                   | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+                   | sort -t. -k1,1n -k2,2n -k3,3n \
+                   | tail -1 || true)
+          if [ -z "${latest}" ]; then
+            echo "::notice::No stable tag found; treating the latest release as 0.0.0."
+            latest="0.0.0"
+          fi
+
+          major_part="${latest%%.*}"
+          rest="${latest#*.}"
+          minor_part="${rest%%.*}"
+          patch_part="${rest##*.}"
+
+          next_major="$((major_part + 1)).0.0"
+          next_minor="${major_part}.$((minor_part + 1)).0"
+          next_patch="${major_part}.${minor_part}.$((patch_part + 1))"
+
+          if [ -n "${INPUT_VERSION}" ]; then
+            V="${INPUT_VERSION#v}"
+            # The override must still be one of the three reachable bumps:
+            # release.yml computes the published version from the LABEL, so a
+            # version the label cannot produce would make the branch name lie
+            # about what eventually ships.
+            case "${V}" in
+              "${next_major}") BUMP=major ;;
+              "${next_minor}") BUMP=minor ;;
+              "${next_patch}") BUMP=patch ;;
+              *)
+                echo "::error::version '${INPUT_VERSION}' is not reachable from the latest tag ${latest}. Reachable: ${next_major} (major), ${next_minor} (minor), ${next_patch} (patch)."
+                exit 1
+                ;;
+            esac
+            echo "Override ${V} accepted; it is the ${BUMP} bump of ${latest}."
+          else
+            BUMP="${INPUT_BUMP}"
+            case "${BUMP}" in
+              major) V="${next_major}" ;;
+              minor) V="${next_minor}" ;;
+              patch) V="${next_patch}" ;;
+              *) echo "::error::unknown bump '${BUMP}'"; exit 1 ;;
+            esac
+            echo "Latest stable tag ${latest} + ${BUMP} -> ${V}"
+          fi
+
+          echo "version=${V}" >> "$GITHUB_OUTPUT"
+          echo "bump=${BUMP}" >> "$GITHUB_OUTPUT"
+
+      - name: Create release/${{ steps.resolve.outputs.version }}
+        id: create
+        env:
+          V: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          branch="release/${V}"
+
+          if git ls-remote --heads origin "${branch}" | grep -q .; then
+            echo "::error::Branch ${branch} already exists on origin. Finish or delete that release before cutting it again (git push origin --delete ${branch}), or pass a different version."
+            exit 1
+          fi
+          if git ls-remote --tags origin "refs/tags/${V}" | grep -q .; then
+            echo "::error::Tag ${V} already exists on origin — that version has already shipped. Pick a higher version."
+            exit 1
+          fi
+
+          # An empty release PR cannot be merged, so fail here with a clear
+          # message instead of at `gh pr create`.
+          ahead=$(git rev-list --count origin/main..origin/development)
+          if [ "${ahead}" -eq 0 ]; then
+            echo "::error::development has no commits beyond main — there is nothing to release."
+            exit 1
+          fi
+          echo "development is ${ahead} commit(s) ahead of main."
+
+          git checkout -b "${branch}" origin/development
+          git push -u origin "${branch}"
+          echo "::notice::Created ${branch} from development"
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+
+      - name: Open draft PR into main
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          V: ${{ steps.resolve.outputs.version }}
+          BUMP: ${{ steps.resolve.outputs.bump }}
+          BRANCH: ${{ steps.create.outputs.branch }}
+        run: |
+          set -euo pipefail
+          # Unquoted heredoc so ${V} expands; deliberately backtick-free so
+          # nothing in the body gets shell-interpreted.
+          body=$(cat <<EOF
+          Release cut from development — SDLC Phase 2.
+
+          1. QA runs against ${BRANCH}. Fix bugs as PRs into that branch
+             (fix/short-description); never merge new features here.
+          2. When green, mark this draft PR ready and merge it into main.
+          3. release.yml then runs release-it on main: it bumps package.json to
+             ${V}, tags it, publishes the GitHub Release and the npm package,
+             and back-merges main into development.
+
+          The ${BUMP} label is what release.yml reads to compute the version.
+          Changing it changes the published version, and this branch name would
+          then no longer match what ships.
+
+          Diff: development...${BRANCH}
+
+          ---
+          *Automated release cut via GitHub Actions* 🚀
+          EOF
+          )
+          url=$(gh pr create \
+            --base main --head "${BRANCH}" --draft \
+            --title "Release ${V}" \
+            --label "${BUMP}" \
+            --body "${body}")
+          echo "draft_pr=${url}" >> "$GITHUB_OUTPUT"
+          echo "${url}"
+
+      # The push above cannot trigger tests.yml (GITHUB_TOKEN recursion guard —
+      # see the header), so start the E2E run explicitly. Non-fatal: the branch
+      # and the draft PR already exist at this point, and failing the job here
+      # would leave them behind with a red run that suggests the cut itself
+      # broke. A warning plus the manual command is the honest outcome.
+      - name: Run the E2E suite against the release branch
+        id: e2e
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.create.outputs.branch }}
+        run: |
+          set -uo pipefail
+          if gh workflow run tests.yml --ref "${BRANCH}"; then
+            echo "::notice::Dispatched tests.yml against ${BRANCH}."
+            echo "dispatched=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Could not dispatch tests.yml against ${BRANCH}. QA must start it by hand: gh workflow run tests.yml --ref ${BRANCH}"
+            echo "dispatched=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Job summary
+        env:
+          V: ${{ steps.resolve.outputs.version }}
+          BUMP: ${{ steps.resolve.outputs.bump }}
+          BRANCH: ${{ steps.create.outputs.branch }}
+          DRAFT_PR: ${{ steps.pr.outputs.draft_pr }}
+          E2E: ${{ steps.e2e.outputs.dispatched }}
+        run: |
+          {
+            echo "## Cut release ${V}"
+            echo ""
+            echo "- branch: \`${BRANCH}\` (cut from \`development\`)"
+            echo "- draft PR (labeled \`${BUMP}\`): ${DRAFT_PR}"
+            if [ "${E2E}" = "true" ]; then
+              echo "- E2E suite: dispatched against \`${BRANCH}\`"
+            else
+              echo "- E2E suite: **not started** — run \`gh workflow run tests.yml --ref ${BRANCH}\`"
+            fi
+            echo ""
+            echo "Next: QA on this branch, then merge the draft PR into \`main\` — \`release.yml\` does the rest."
+          } >> "$GITHUB_STEP_SUMMARY"

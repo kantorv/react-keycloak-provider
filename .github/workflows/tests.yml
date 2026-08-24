@@ -9,6 +9,17 @@ on:
     branches:
       - 'feature/*'
       - 'hotfix/*'
+      # QA during a release freeze happens on the release branch and on the
+      # fix/* branches merged into it, so both have to run the E2E suite.
+      - 'release/*'
+      - 'fix/*'
+  # Lets QA re-run the suite against any ref without pushing an empty commit,
+  # and — the load-bearing reason — lets cut-release.yml start this suite on a
+  # freshly cut release branch. The push that creates that branch is made with
+  # GITHUB_TOKEN, which never triggers workflows; workflow_dispatch is the
+  # documented exception. Requires this file to be present on the default
+  # branch (development), which is where release branches are cut from.
+  workflow_dispatch:
 
 
 env:

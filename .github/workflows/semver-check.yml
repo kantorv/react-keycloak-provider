@@ -1,13 +1,29 @@
 name: Release type check
 
+# Guards the label that drives the version bump. Which check applies depends on
+# where the PR is going (see docs/SDLC.md):
+#   release/* -> main : no check. cut-release.yml already labeled the PR with
+#                       the bump its branch name was computed from.
+#   * -> main         : the hotfix path — requires the `patch` label, because
+#                       release.yml forces a patch bump there anyway.
+#   * -> development  : requires major/minor/patch, so the label is on the
+#                       commit history a later release cut will roll up.
 on:
   pull_request:
     types:
       - edited
       - opened
       - synchronize
+      # Without these two, the fix for a failed run — adding the missing label —
+      # does not re-run the check: `edited` covers the title/body/base, not
+      # labels, and a manual re-run replays the ORIGINAL event payload, which
+      # still has no label on it. The gate would stay red until someone pushed
+      # an unrelated commit.
+      - labeled
+      - unlabeled
     branches:
       - 'development'
+      - 'main'
 
 
 jobs:
@@ -28,13 +44,37 @@ jobs:
 
       - name: Determine the release type # TODO: deal with multiple labels
         id: release_type
+        env:
+          LABELS: ${{ env.labels }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+          SOURCE_BRANCH: ${{ github.head_ref }}
         run: |
-          labels=${{ env.labels }}
-          if [[ "$labels" == *"major"* ]]; then
+          set -euo pipefail
+
+          # Release PRs (release/* -> main): the bump label came from the cut.
+          if [[ "$TARGET_BRANCH" == "main" && "$SOURCE_BRANCH" == release/* ]]; then
+            echo "Release branch PR -> skipping semver label check (labeled at cut time)"
+            echo "release_type=release" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # Hotfix PRs (-> main, non-release source): only patch allowed.
+          if [[ "$TARGET_BRANCH" == "main" ]]; then
+            if [[ "$LABELS" == *"patch"* ]]; then
+              echo "release_type=patch" >> $GITHUB_ENV
+            else
+              echo "Hotfix PRs to main require a 'patch' label."
+              exit 1
+            fi
+            exit 0
+          fi
+
+          # Feature PRs (-> development): require major/minor/patch.
+          if [[ "$LABELS" == *"major"* ]]; then
             echo "release_type=major" >> $GITHUB_ENV
-          elif [[ "$labels" == *"minor"* ]]; then
+          elif [[ "$LABELS" == *"minor"* ]]; then
             echo "release_type=minor" >> $GITHUB_ENV
-          elif [[ "$labels" == *"patch"* ]]; then
+          elif [[ "$LABELS" == *"patch"* ]]; then
             echo "release_type=patch" >> $GITHUB_ENV
           else
             echo "No valid release label found."

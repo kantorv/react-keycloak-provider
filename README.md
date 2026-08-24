@@ -114,6 +114,17 @@ const AppBar = ()=> {
 
 ```
 
+## Contributing & releases
+
+`development` is the default branch and the integration target; `main` is the
+publish target. Merging a `feature/*` PR into `development` **does not** publish
+anything to npm. A release is cut explicitly (`cut-release.yml`) onto a
+`release/X.Y.Z` branch, QA'd there, and published when that branch's PR is
+merged into `main`.
+
+- [docs/RELEASING.md](docs/RELEASING.md) — how to cut, QA and ship a release, and the hotfix path
+- [docs/SDLC.md](docs/SDLC.md) — branching strategy and versioning policy
+
 ## References
 - [Keycloak JavaScript adapter](https://www.keycloak.org/docs/latest/securing_apps/index.html#_javascript_adapter)
 

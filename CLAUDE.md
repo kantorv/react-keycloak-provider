@@ -44,8 +44,12 @@ ci/
   requirements.txt              # Python deps for ci/tests (selenium)
 .github/workflows/
   tests.yml                     # full E2E pipeline (see "CI / E2E flow" below)
-  release.yml                   # build + release-it + npm publish on merge to `development`
-  semver-check.yml              # enforces a major/minor/patch PR label before merge
+  cut-release.yml               # manual dispatch: cuts release/X.Y.Z off development, opens a draft PR into main
+  release.yml                   # build + release-it + npm publish on merge of release/* or hotfix/* into `main`
+  semver-check.yml              # enforces the PR label rules per target branch (see "Release process")
+docs/
+  RELEASING.md                  # the release/hotfix runbook
+  SDLC.md                       # branching & lifecycle policy
 rollup.config.js                # library build: CJS + ESM bundles, plus a separate .d.ts bundle pass
 tsconfig.json                   # noEmit: true — TS is used for type-checking only, rollup/babel does the JS emit
 package.json                    # main/module/types point at ./build/*, scripts below
@@ -140,7 +144,8 @@ for the exact Chrome version pinned (`CHROME_VERSION` env var) if reproducing lo
 ## CI / E2E flow (`.github/workflows/tests.yml`)
 
 This is the most informative file for understanding "what does correct behavior
-look like end-to-end." On push to `feature/*` or `hotfix/*` branches it:
+look like end-to-end." On push to `feature/*`, `hotfix/*`, `release/*` or `fix/*`
+branches — or on a manual `workflow_dispatch` against any ref — it:
 1. Downloads/caches a pinned Chrome + chromedriver build.
 2. Loads/caches the pinned Keycloak Docker image.
 3. `yarn install`, bumps a `-rc` prerelease version, `yarn build`, `yarn pack`.
@@ -159,10 +164,10 @@ keep that in mind if asked to "speed up CI by testing source directly."
 
 **Why the workflow bumps to an `-rc.<run>.<attempt>` version before packing.**
 `yarn add <tarball>` caches by `name@version`, and setup-node's `cache: 'yarn'`
-restores that cache across runs. `release-it` only bumps the version on merge to
-`development`, so without the bump every feature-branch run packs *different*
-contents under the *same* version — and yarn installs whichever copy it cached
-first. The symptom is a demo-app build failing against stale `.d.ts`
+restores that cache across runs. `release-it` only bumps the version when a
+release ships (a `release/*` or `hotfix/*` merge into `main`), so without the
+bump every run between two releases packs *different* contents under the *same*
+version — and yarn installs whichever copy it cached first. The symptom is a demo-app build failing against stale `.d.ts`
 (e.g. `Property 'x' does not exist on type ...` for something the branch just
 added), which looks like a source bug and isn't. The `Setup demo app` step
 asserts the installed version equals the packed one, so a recurrence fails
@@ -171,12 +176,38 @@ version clean" — nothing is committed or tagged (`--no-git-tag-version`).
 
 ## Release process
 
-- Work happens on branches named `feature/*` or `hotfix/*`, PR'd into `development`.
-- `semver-check.yml` blocks merge unless the PR has a `major`, `minor`, or `patch` label.
-- `release.yml` runs on PR merge to `development`: builds, then `release-it`
-  bumps version/tag/GitHub release/npm publish per the chosen label.
-- Commit messages containing `--skip-ci` skip both the test and release-type-check workflows.
-- `main`/default branch in this repo is `development`, not `main`.
+Full detail in [`docs/RELEASING.md`](docs/RELEASING.md) (runbook) and
+[`docs/SDLC.md`](docs/SDLC.md) (branching policy). In short — **merging is not
+releasing**:
+
+- Feature work happens on `feature/*`, PR'd into `development`. `semver-check.yml`
+  requires a `major`/`minor`/`patch` label on those PRs. **Merging into
+  `development` publishes nothing and creates no tag** — it used to publish an npm
+  version per merged PR; that trigger has moved to `main`.
+- A release is cut explicitly: `cut-release.yml` (manual `workflow_dispatch` from
+  `development`) resolves the next version from the latest tag plus the intended
+  bump, creates `release/X.Y.Z`, and opens a **draft PR into `main`** labeled with
+  that bump. QA happens on that branch; bugs are fixed via `fix/*` PRs into it.
+- **A workflow's own pushes never trigger other workflows** (GitHub's
+  `GITHUB_TOKEN` recursion guard). That is why `cut-release.yml` ends by
+  dispatching `tests.yml` at the new release branch rather than relying on
+  `tests.yml`'s `release/*` push trigger, and why the draft release PR carries no
+  `semver-check` run. Don't "simplify" either one away.
+- `release.yml` runs on a `release/*` **or** `hotfix/*` PR merged into `main`:
+  builds, then `release-it` does version bump/tag/GitHub release/npm publish. The
+  bump is label-driven for `release/*` (default `minor`) and forced `patch` for
+  `hotfix/*`. It then back-merges `main` into `development`, opening a
+  `sync/main-to-dev-X.Y.Z` PR if that merge conflicts or the push is rejected.
+- `semver-check.yml` also guards PRs into `main`: `release/*` PRs skip the label
+  check (already labeled at cut time), anything else targeting `main` (the hotfix
+  path) requires `patch`.
+- Tags are bare `X.Y.Z`, **not** `vX.Y.Z` — that is `release-it`'s default
+  `git.tagName` and every existing tag follows it. `cut-release.yml` does version
+  math on tag names, so don't introduce a prefix.
+- Commit messages containing `--skip-ci` skip both the test and release-type-check
+  workflows.
+- The repo's default branch is `development`. `main` is the publish target, not
+  the working branch.
 
 ## Known quirks / things to double-check before "fixing"
 
